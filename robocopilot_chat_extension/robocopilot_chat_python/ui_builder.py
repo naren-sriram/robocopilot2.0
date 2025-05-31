@@ -117,12 +117,13 @@ class UIBuilder:
                 self._reset_btn.enabled = False
                 self.wrapped_ui_elements.append(self._reset_btn)
 
-                clear_btn = ui.Button(
-                    "🗑️ Clear Scene",
+                self.clear_btn = ui.Button(
+                    "Clear Scene",
                     height=30,
                     clicked_fn=self._on_clear_scene,
                     style={"background_color": 0xFFFF6600}
                 )
+                self.wrapped_ui_elements.append(self.clear_btn)
 
             # Status display
             self.scene_status_label = ui.Label(
@@ -347,15 +348,32 @@ class UIBuilder:
     def _on_clear_scene(self):
         """Clear the scene"""
         try:
+            # Stop simulation if running
+            if self.world and self.world.is_playing():
+                self.world.stop()
+                self._add_chat_message("RoboCopilot", "Stopping simulation...")
+
             # Clean up RoboCopilot sample first
             if self.robocopilot_sample:
                 self.robocopilot_sample.world_cleanup()
                 self.robocopilot_sample = None
+                self._add_chat_message("RoboCopilot", "🧹 Cleaning up RoboCopilot sample...")
 
-            # Clear the world
+            # Clear the world and stage
             if self.world:
+                # Remove physics callbacks
+                if self.world.physics_callback_exists("sim_step"):
+                    self.world.remove_physics_callback("sim_step")
+                
+                # Clear the world
                 self.world.clear()
                 self.world = None
+                self._add_chat_message("RoboCopilot", "🧹 Clearing world...")
+
+            # Create a new empty stage to completely reset everything
+            from isaacsim.core.utils.stage import create_new_stage
+            create_new_stage()
+            self._add_chat_message("RoboCopilot", "Creating new empty stage...")
 
             # Update UI state
             self.scene_status_label.text = "Scene cleared"
@@ -367,11 +385,17 @@ class UIBuilder:
             if "Execute Task" in self.task_ui_elements:
                 self.task_ui_elements["Execute Task"].enabled = False
 
-            self._add_chat_message("RoboCopilot", "🧹 Scene cleared.")
+            # Reset status
+            self.status_label.text = "Ready"
+            self.status_label.style = {"color": 0xFF00FF00, "font_size": 12}
+
+            self._add_chat_message("RoboCopilot", "Scene cleared successfully. Ready to load a new scene.")
 
         except Exception as e:
             self._add_chat_message("RoboCopilot", f"Error clearing scene: {str(e)}")
             print(f"Clear scene error: {e}")
+            import traceback
+            traceback.print_exc()
 
     def _on_send_message(self):
         """Handle sending a message"""
@@ -398,7 +422,7 @@ class UIBuilder:
 
         self.current_prompt = prompt
         self._add_chat_message("User", prompt)
-        self._add_chat_message("RoboCopilot", f"🚀 Executing task: {prompt}")
+        self._add_chat_message("RoboCopilot", f"Executing task: {prompt}")
 
         # Update status
         self.status_label.text = "Executing Task..."

@@ -62,7 +62,8 @@ class RoboCopilotChat:
                     f"/World/cube_{i}",
                     position=position,
                     size=0.05,
-                    color=np.array([1.0, 0.0, 0.0]) if i == 0 else np.array([0.0, 1.0, 0.0])
+                    color=np.array([0.0, 1.0, 0.0]),
+                    name=f"cube_{i}"
                 )
                 self._cubes.append(cube)
             
