@@ -2,7 +2,7 @@
 
 ## What We Built
 
-The **RoboCopilot Stack Extension** is an enhanced version of the Isaac Sim Simple Stack example that adds a modern chat-based interface for robotic manipulation tasks. While maintaining the same core cube stacking functionality, it provides a significantly improved user experience.
+The **RoboCopilot Chat Extension** is an enhanced version of the Isaac Sim Simple Stack example that adds a modern chat-based interface for robotic manipulation tasks. While maintaining the same core cube stacking functionality, it provides a significantly improved user experience.
 
 ## Key Enhancements Over Simple Stack
 

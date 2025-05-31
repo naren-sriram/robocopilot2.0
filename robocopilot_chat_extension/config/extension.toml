@@ -13,7 +13,7 @@ description = "An AI-powered stacking interface with chat functionality for Isaa
 readme = "docs/README.md"
 
 # One of categories for UI.
-category = "Manipulation"
+category = "Simulation"
 
 # Keywords for the extension
 keywords = ["manipulation", "franka", "stacking", "ai", "chat", "robotics"]
@@ -29,13 +29,17 @@ preview_image = "data/preview.png"
 # Icon is shown in Extensions window, it is recommended to be square, of size 256x256.
 icon = "data/icon.png"
 
-# Dependencies
+# Dependencies - Updated for Isaac Sim 4.5 compatibility
 [dependencies]
 "omni.isaac.examples" = {}
 "omni.isaac.manipulators" = {}
 "omni.isaac.franka" = {}
 "omni.isaac.core" = {}
 "omni.isaac.ui" = {}
+"omni.kit.ui" = {}
+"omni.kit.uiapp" = {}
+"isaacsim.gui.components" = {}
+"isaacsim.core.api" = {}
 
 # Main module of this extension (entrypoint)
 [[python.module]]

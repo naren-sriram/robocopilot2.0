@@ -8,4 +8,4 @@
 #
 
 from .robocopilot_chat import RoboCopilotChat
-from .robocopilot_chat import RoboCopilotChatExtension 
+from .robocopilot_chat_extension import RoboCopilotChatExtension 

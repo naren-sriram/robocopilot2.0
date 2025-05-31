@@ -15,14 +15,14 @@ import omni.ext
 import omni.ui as ui
 from isaacsim.examples.browser import get_instance as get_browser_instance
 from isaacsim.examples.interactive.base_sample import BaseSampleUITemplate
-from robocopilot_chat.robocopilot_chat import RoboCopilotChat
+from .robocopilot_chat import RoboCopilotChat
 from isaacsim.gui.components.ui_utils import btn_builder
 
 
 class RoboCopilotChatExtension(omni.ext.IExt):
     def on_startup(self, ext_id: str):
-        self.example_name = "RoboCopilot Stack"
-        self.category = "Manipulation"
+        self.example_name = "RoboCopilot Chat"
+        self.category = "Simulation"
 
         ui_kwargs = {
             "ext_id": ext_id,

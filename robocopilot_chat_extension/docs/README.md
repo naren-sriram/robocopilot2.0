@@ -1,10 +1,10 @@
-# RoboCopilot Stack Extension
+# RoboCopilot Chat Extension
 
 An AI-powered stacking interface with chat functionality for Isaac Sim manipulation tasks using the Franka robot.
 
 ## Overview
 
-The RoboCopilot Stack Extension provides an intuitive chat-based interface for controlling robotic manipulation tasks in Isaac Sim. While the underlying functionality performs the same cube stacking operations as the Simple Stack example, this extension enhances the user experience with:
+The RoboCopilot Chat Extension provides an intuitive chat-based interface for controlling robotic manipulation tasks in Isaac Sim. While the underlying functionality performs the same cube stacking operations as the Simple Stack example, this extension enhances the user experience with:
 
 - **🤖 Chat Interface**: Natural language command input with visual feedback
 - **🚀 Execute Task Button**: Clear action button for task execution
