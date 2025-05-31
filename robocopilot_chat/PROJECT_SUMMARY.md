@@ -41,7 +41,7 @@ robocopilot-extension/
 
 ## Core Components
 
-### RoboCopilotStack Class
+### RoboCopilotChat Class
 - Extends the original SimpleStack functionality
 - Adds execution logging and status tracking
 - Provides enhanced task execution with prompt context

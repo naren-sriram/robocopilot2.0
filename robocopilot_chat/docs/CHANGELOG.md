@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 🔄 System Controls: Clear chat, refresh status, and reset functionality
 
 ### Technical Implementation
-- RoboCopilotStack class extending SimpleStack functionality
+- RoboCopilotChat class extending SimpleStack functionality
 - RoboCopilotUI class with enhanced user interface components
 - Chat message system with timestamp tracking
 - Status management and execution logging

@@ -12,7 +12,7 @@ from isaacsim.robot.manipulators.examples.franka.controllers.stacking_controller
 from isaacsim.robot.manipulators.examples.franka.tasks import Stacking
 
 
-class RoboCopilotStack(BaseSample):
+class RoboCopilotChat(BaseSample):
     def __init__(self) -> None:
         super().__init__()
         self._controller = None

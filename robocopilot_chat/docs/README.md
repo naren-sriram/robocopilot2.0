@@ -82,7 +82,7 @@ While the extension currently performs cube stacking regardless of the specific 
 
 The extension consists of two main components:
 
-1. **RoboCopilotStack**: Core functionality class that extends the original SimpleStack
+1. **RoboCopilotChat**: Core functionality class that extends the original SimpleStack
    - Maintains execution logs and status
    - Provides enhanced task execution with prompt context
    - Manages system state and feedback
@@ -137,7 +137,7 @@ The extension is designed to be easily customizable:
 - **UI Layout**: Modify frame sizes and arrangements in `build_extra_frames()`
 - **Chat Styling**: Update colors and fonts in the UI styling dictionaries
 - **Status Messages**: Customize feedback messages in the various event handlers
-- **Task Logic**: Extend the core functionality in `RoboCopilotStack`
+- **Task Logic**: Extend the core functionality in `RoboCopilotChat`
 
 ### Future Enhancements
 

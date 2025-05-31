@@ -15,11 +15,11 @@ import omni.ext
 import omni.ui as ui
 from isaacsim.examples.browser import get_instance as get_browser_instance
 from isaacsim.examples.interactive.base_sample import BaseSampleUITemplate
-from .robocopilot_stack import RoboCopilotStack
+from robocopilot_chat.robocopilot_chat import RoboCopilotChat
 from isaacsim.gui.components.ui_utils import btn_builder
 
 
-class RoboCopilotExtension(omni.ext.IExt):
+class RoboCopilotChatExtension(omni.ext.IExt):
     def on_startup(self, ext_id: str):
         self.example_name = "RoboCopilot Stack"
         self.category = "Manipulation"
@@ -30,7 +30,7 @@ class RoboCopilotExtension(omni.ext.IExt):
             "title": "RoboCopilot Stack",
             "doc_link": "https://docs.isaacsim.omniverse.nvidia.com/latest/core_api_tutorials/tutorial_core_adding_manipulator.html",
             "overview": "This Extension shows an AI-powered stacking interface using Franka robot in Isaac Sim.\n\nEnter natural language commands in the chat window and click 'Execute Task' to perform stacking operations.\n\nPress the 'Open in IDE' button to view the source code.",
-            "sample": RoboCopilotStack(),
+            "sample": RoboCopilotChat(),
         }
 
         ui_handle = RoboCopilotUI(**ui_kwargs)
