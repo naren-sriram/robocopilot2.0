@@ -78,14 +78,14 @@ ln -s /path/to/robocopilot-extension ~/.local/share/ov/pkg/isaac_sim-*/exts/
 robocopilot-extension/
 ├── __init__.py                 # Module initialization
 ├── robocopilot_stack.py       # Core functionality
-├── robocopilot_extension.py   # UI and extension logic
+├── robocopilot_chat.py   # UI and extension logic
 ├── extension.toml             # Extension configuration
 ├── docs/                      # Documentation
 └── INSTALLATION.md            # This file
 ```
 
 ### Customization
-- Modify UI layout in `robocopilot_extension.py`
+- Modify UI layout in `robocopilot_chat.py`
 - Extend functionality in `robocopilot_stack.py`
 - Update styling and colors in the UI classes
 - Add new features following Isaac Sim extension patterns

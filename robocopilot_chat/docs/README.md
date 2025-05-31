@@ -123,7 +123,7 @@ The extension consists of two main components:
 robocopilot-extension/
 ├── __init__.py                 # Extension module initialization
 ├── robocopilot_stack.py       # Core functionality class
-├── robocopilot_extension.py   # UI and extension management
+├── robocopilot_chat.py   # UI and extension management
 ├── extension.toml             # Extension configuration
 └── docs/
     ├── README.md              # This documentation

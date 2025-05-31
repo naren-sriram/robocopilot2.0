@@ -19,7 +19,7 @@ The typical locations are:
 cd /path/to/your/workspace
 
 # Copy the extension to Isaac Sim extensions directory
-cp -r robocopilot_extension ~/.local/share/ov/pkg/isaac_sim-*/exts/
+cp -r robocopilot_chat ~/.local/share/ov/pkg/isaac_sim-*/exts/
 ```
 
 ### 3. Verify Directory Structure
@@ -27,10 +27,10 @@ cp -r robocopilot_extension ~/.local/share/ov/pkg/isaac_sim-*/exts/
 After copying, your Isaac Sim extensions directory should contain:
 ```
 isaac_sim-*/exts/
-└── robocopilot_extension/
+└── robocopilot_chat/
     ├── __init__.py
     ├── robocopilot_stack.py
-    ├── robocopilot_extension.py
+    ├── robocopilot_chat.py
     ├── extension.toml
     ├── docs/
     └── other files...
@@ -53,7 +53,7 @@ isaac_sim-*/exts/
 
 ## Recent Fixes
 
-✅ **Import Error Fixed**: Changed from absolute imports (`from robocopilot_extension.module`) to relative imports (`from .module`)  
+✅ **Import Error Fixed**: Changed from absolute imports (`from robocopilot_chat.module`) to relative imports (`from .module`)  
 ✅ **Package Structure**: Proper Python package structure with relative imports  
 ✅ **Isaac Sim Compatibility**: Follows Isaac Sim extension development patterns  
 
@@ -61,7 +61,7 @@ isaac_sim-*/exts/
 
 ### Import Errors
 - The extension now uses relative imports which should work properly
-- Ensure the directory is named `robocopilot_extension` (with underscore)
+- Ensure the directory is named `robocopilot_chat` (with underscore)
 - Check that all files are present in the extension directory
 - Restart Isaac Sim after copying the extension
 

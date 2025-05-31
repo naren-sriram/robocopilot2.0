@@ -30,7 +30,7 @@ The **RoboCopilot Stack Extension** is an enhanced version of the Isaac Sim Simp
 robocopilot-extension/
 ├── __init__.py                 # Extension module initialization
 ├── robocopilot_stack.py       # Enhanced core functionality
-├── robocopilot_extension.py   # Modern UI implementation
+├── robocopilot_chat.py   # Modern UI implementation
 ├── extension.toml             # Extension configuration
 ├── INSTALLATION.md            # Quick setup guide
 ├── PROJECT_SUMMARY.md         # This summary

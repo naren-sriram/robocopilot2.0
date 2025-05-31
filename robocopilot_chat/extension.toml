@@ -39,7 +39,7 @@ icon = "data/icon.png"
 
 # Main module of this extension (entrypoint)
 [[python.module]]
-name = "robocopilot_extension"
+name = "robocopilot_chat"
 
 # Watch the .py files for hot reloading (only works for Python files), by default only .py files are watched
 [settings]
