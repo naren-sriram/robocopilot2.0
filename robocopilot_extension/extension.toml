@@ -29,7 +29,7 @@ preview_image = "data/preview.png"
 # Icon is shown in Extensions window, it is recommended to be square, of size 256x256.
 icon = "data/icon.png"
 
-# We only depend on testing framework currently.
+# Dependencies
 [dependencies]
 "omni.isaac.examples" = {}
 "omni.isaac.manipulators" = {}

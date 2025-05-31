@@ -15,7 +15,7 @@ import omni.ext
 import omni.ui as ui
 from isaacsim.examples.browser import get_instance as get_browser_instance
 from isaacsim.examples.interactive.base_sample import BaseSampleUITemplate
-from .robocopilot_stack import RoboCopilotStack
+from robocopilot_extension.robocopilot_stack import RoboCopilotStack
 from isaacsim.gui.components.ui_utils import btn_builder
 
 
