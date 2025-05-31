@@ -31,19 +31,25 @@ class RoboCopilotChat:
     def setup_scene(self):
         """Setup the scene with Franka robot and cubes"""
         try:
+            self._log_message("Starting scene setup...")
+            
             # Create new stage
+            self._log_message("Creating new stage...")
             create_new_stage()
             self._add_light_to_stage()
             
             # Load Franka robot
+            self._log_message("Loading Franka robot...")
             robot_prim_path = "/franka"
             path_to_robot_usd = get_assets_root_path() + "/Isaac/Robots/Franka/franka.usd"
             add_reference_to_stage(path_to_robot_usd, robot_prim_path)
             
             # Create Franka articulation
+            self._log_message("Creating Franka articulation...")
             self._franka = SingleArticulation(robot_prim_path)
             
             # Create cubes for stacking
+            self._log_message("Creating cubes...")
             self._cubes = []
             cube_positions = [
                 np.array([0.3, 0.3, 0.05]),  # Bottom cube
@@ -51,6 +57,7 @@ class RoboCopilotChat:
             ]
             
             for i, position in enumerate(cube_positions):
+                self._log_message(f"Creating cube {i}...")
                 cube = DynamicCuboid(
                     f"/World/cube_{i}",
                     position=position,
@@ -60,9 +67,13 @@ class RoboCopilotChat:
                 self._cubes.append(cube)
             
             # Add objects to world (World will be created by LoadButton)
+            self._log_message("Getting World instance...")
             self._world = World.instance()
+            
+            self._log_message("Adding objects to World...")
             self._world.scene.add(self._franka)
-            for cube in self._cubes:
+            for i, cube in enumerate(self._cubes):
+                self._log_message(f"Adding cube {i} to World...")
                 self._world.scene.add(cube)
             
             self._log_message("Scene setup completed with Franka robot and cubes")

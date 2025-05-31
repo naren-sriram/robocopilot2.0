@@ -243,11 +243,14 @@ class UIBuilder:
             # Create RoboCopilot sample
             if not self.robocopilot_sample:
                 self.robocopilot_sample = RoboCopilotChat()
+                self._add_chat_message("RoboCopilot", "🔄 Creating RoboCopilot sample...")
             
             # Setup the scene (this will create stage and add objects)
+            self._add_chat_message("RoboCopilot", "🔄 Setting up scene...")
             success = self.robocopilot_sample.setup_scene()
             
             if not success:
+                self.robocopilot_sample = None  # Clear failed sample
                 raise Exception("Failed to setup scene")
             
             # Get the world instance (created by LoadButton)
@@ -256,16 +259,38 @@ class UIBuilder:
             self._add_chat_message("RoboCopilot", "🔄 Scene created successfully...")
             
         except Exception as e:
-            self._add_chat_message("RoboCopilot", f"❌ Error setting up scene: {str(e)}")
+            # Clear the sample if setup failed
+            self.robocopilot_sample = None
+            self._add_chat_message("RoboCopilot", f"Error setting up scene: {str(e)}")
             print(f"Scene setup error: {e}")
             import traceback
             traceback.print_exc()
+            # Re-raise the exception so LoadButton knows setup failed
+            raise
 
     def _setup_post_load(self):
         """Post-load callback for LoadButton - setup controllers after World is initialized"""
         try:
+            # Setup controllers asynchronously
+            asyncio.ensure_future(self._setup_post_load_async())
+            
+        except Exception as e:
+            self.scene_status_label.text = f"Error in post-load: {str(e)}"
+            self.scene_status_label.style = {"color": 0xFFFF0000, "font_size": 12}
+            self._add_chat_message("RoboCopilot", f" Error in post-load: {str(e)}")
+            print(f"Post-load error: {e}")
+            import traceback
+            traceback.print_exc()
+
+    async def _setup_post_load_async(self):
+        """Async version of post-load setup"""
+        try:
+            # Check if robocopilot_sample exists
+            if not self.robocopilot_sample:
+                raise Exception("RoboCopilot sample not initialized")
+            
             # Setup controllers
-            success = asyncio.ensure_future(self.robocopilot_sample.setup_post_load())
+            await self.robocopilot_sample.setup_post_load()
             
             # Update status
             self.scene_status_label.text = "Scene loaded successfully"
@@ -276,13 +301,13 @@ class UIBuilder:
             if "Execute Task" in self.task_ui_elements:
                 self.task_ui_elements["Execute Task"].enabled = True
             
-            self._add_chat_message("RoboCopilot", "✅ Scene loaded successfully! Ready to execute tasks.")
+            self._add_chat_message("RoboCopilot", "Scene loaded successfully! Ready to execute tasks.")
             
         except Exception as e:
-            self.scene_status_label.text = f"Error in post-load: {str(e)}"
+            self.scene_status_label.text = f"Error in async post-load: {str(e)}"
             self.scene_status_label.style = {"color": 0xFFFF0000, "font_size": 12}
-            self._add_chat_message("RoboCopilot", f"❌ Error in post-load: {str(e)}")
-            print(f"Post-load error: {e}")
+            self._add_chat_message("RoboCopilot", f"Error in async post-load: {str(e)}")
+            print(f"Async post-load error: {e}")
             import traceback
             traceback.print_exc()
 
@@ -292,7 +317,7 @@ class UIBuilder:
             if self.robocopilot_sample:
                 asyncio.ensure_future(self.robocopilot_sample.setup_pre_reset())
         except Exception as e:
-            self._add_chat_message("RoboCopilot", f"❌ Error in pre-reset: {str(e)}")
+            self._add_chat_message("RoboCopilot", f"Error in pre-reset: {str(e)}")
 
     def _post_reset(self):
         """Post-reset callback for ResetButton"""
@@ -301,7 +326,7 @@ class UIBuilder:
             self.scene_status_label.style = {"color": 0xFFFFAA00, "font_size": 12}
             self._add_chat_message("RoboCopilot", "🔄 Scene reset successfully.")
         except Exception as e:
-            self._add_chat_message("RoboCopilot", f"❌ Error in post-reset: {str(e)}")
+            self._add_chat_message("RoboCopilot", f"Error in post-reset: {str(e)}")
 
     def _on_clear_scene(self):
         """Clear the scene"""
@@ -324,7 +349,7 @@ class UIBuilder:
             self._add_chat_message("RoboCopilot", "🧹 Scene cleared.")
 
         except Exception as e:
-            self._add_chat_message("RoboCopilot", f"❌ Error clearing scene: {str(e)}")
+            self._add_chat_message("RoboCopilot", f"Error clearing scene: {str(e)}")
 
     def _on_send_message(self):
         """Handle sending a message"""
@@ -341,7 +366,7 @@ class UIBuilder:
             prompt = "Stack the cubes"
 
         if not self.robocopilot_sample:
-            self._add_chat_message("RoboCopilot", "❌ Please load the scene first!")
+            self._add_chat_message("RoboCopilot", "Please load the scene first!")
             return
 
         self.current_prompt = prompt
@@ -370,7 +395,7 @@ class UIBuilder:
 
             self.status_label.text = "Task Completed"
             self.status_label.style = {"color": 0xFF00AAFF, "font_size": 12}
-            self._add_chat_message("RoboCopilot", "✅ Task completed successfully!")
+            self._add_chat_message("RoboCopilot", "Task completed successfully!")
 
         except Exception as e:
             if "Execute Task" in self.task_ui_elements:
@@ -378,7 +403,7 @@ class UIBuilder:
 
             self.status_label.text = "Task Failed"
             self.status_label.style = {"color": 0xFFFF0000, "font_size": 12}
-            self._add_chat_message("RoboCopilot", f"❌ Task failed: {str(e)}")
+            self._add_chat_message("RoboCopilot", f"Task failed: {str(e)}")
 
     def _on_clear_chat(self):
         """Clear the chat history"""
