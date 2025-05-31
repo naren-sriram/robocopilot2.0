@@ -1,8 +1,8 @@
-# Quick Installation Guide - RoboCopilot Extension (Isaac Sim 4.5)
+# Quick Installation Guide - RoboCopilot Standalone Extension
 
-## Isaac Sim 4.5 Compatibility Updates ✅
+## ✅ Standalone Extension Ready!
 
-This extension has been updated to address Isaac Sim 4.5 migration issues. Based on [NVIDIA Developer Forum discussions](https://forums.developer.nvidia.com/t/issues-with-extensions-moving-from-isaac-4-2-4-5/322302/3), several compatibility fixes have been implemented.
+The RoboCopilot extension has been converted to a **standalone extension** that appears in the Isaac Sim Extensions window and creates its own UI window, rather than appearing in the Isaac Examples menu.
 
 ## Installation Steps
 
@@ -19,7 +19,7 @@ The typical locations are:
 cd /path/to/your/workspace
 
 # Copy the extension to Isaac Sim extensions directory
-cp -r robocopilot_chat ~/.local/share/ov/pkg/isaac_sim-*/exts/
+cp -r robocopilot_chat_extension ~/.local/share/ov/pkg/isaac_sim-*/exts/
 ```
 
 ### 3. Verify Directory Structure
@@ -27,110 +27,101 @@ cp -r robocopilot_chat ~/.local/share/ov/pkg/isaac_sim-*/exts/
 After copying, your Isaac Sim extensions directory should contain:
 ```
 isaac_sim-*/exts/
-└── robocopilot_chat/
-    ├── __init__.py
-    ├── robocopilot_chat.py
-    ├── robocopilot_chat_extension.py
-    ├── extension.toml
-    ├── docs/
-    └── other files...
+└── robocopilot_chat_extension/
+    ├── config/
+    │   └── extension.toml
+    ├── robocopilot_chat_python/
+    │   ├── __init__.py
+    │   ├── extension.py
+    │   ├── ui_builder.py
+    │   ├── robocopilot_chat.py
+    │   └── global_variables.py
+    ├── data/
+    └── docs/
 ```
 
-### 4. Enable Required Extensions First
+### 4. Enable the Extension
 
-**IMPORTANT**: Before enabling RoboCopilot, ensure these extensions are enabled:
-1. Go to **Window > Extensions**
-2. Enable the following extensions:
-   - `omni.isaac.examples`
-   - `omni.isaac.manipulators` 
-   - `omni.isaac.franka`
-   - `omni.isaac.core`
-   - `omni.isaac.ui`
+1. Open Isaac Sim
+2. Go to **Window > Extensions**
+3. Search for "RoboCopilot Chat"
+4. Toggle the extension **ON**
+5. Check the Console window for any errors
 
-### 5. Enable RoboCopilot Extension
+### 5. Access the Extension
 
-1. In the Extensions window, search for "RoboCopilot"
-2. Toggle the extension ON
-3. Check the Console window for any errors
+1. After enabling, look for **"RoboCopilot Chat"** in the Isaac Sim menu bar
+2. Click on it to open the extension window
+3. The extension window will dock to the left side of the viewport
 
-### 6. Access the Extension
+## How to Use the Standalone Extension
 
-1. Go to **Isaac Examples > Manipulation > RoboCopilot Stack**
-2. The extension window should open
-3. Click **Load** to initialize the scene
-4. Start using the chat interface!
+### 1. **Scene Control**
+- Click **"🔄 Load Scene"** to initialize the Franka robot and cubes
+- Use **"🔄 Reset Scene"** to reset the simulation
+- Use **"🗑️ Clear Scene"** to clear everything
 
-## Isaac Sim 4.5 Specific Fixes Applied
+### 2. **Chat Interface**
+- Enter natural language commands in the text field
+- Click **"📤 Send"** to add your message to the chat
+- View conversation history in the chat display
 
-✅ **Relative Imports**: Changed from absolute to relative imports (`from .module`)  
-✅ **Extension Dependencies**: Updated dependencies for Isaac Sim 4.5 compatibility  
-✅ **Import Structure**: Fixed package structure to work with Isaac Sim 4.5  
-✅ **Extension Registration**: Proper registration with Isaac Examples browser  
+### 3. **Task Execution**
+- After loading the scene, click **"🚀 Execute Task"** to run the stacking operation
+- Monitor the system status and chat for feedback
+- Use **"🗑️ Clear Chat"** to clear the conversation history
 
-## Troubleshooting Isaac Sim 4.5 Issues
+## Key Features
 
-### Extension Not Appearing in Toolbar/Menu
-This is a common Isaac Sim 4.5 issue. Try these steps:
+✅ **Standalone Window**: Creates its own dockable window  
+✅ **Scene Management**: Load, reset, and clear scenes independently  
+✅ **Chat Interface**: Natural language command input with history  
+✅ **Real-time Status**: Live status updates and error handling  
+✅ **Task Execution**: Execute Franka robot stacking tasks  
+✅ **Visual Feedback**: Color-coded messages and status indicators  
 
-1. **Check Extension Dependencies**:
-   - Ensure all required Isaac extensions are enabled first
-   - Look for any red error indicators in the Extensions window
+## Extension Architecture
 
-2. **Restart Isaac Sim**:
-   - Close Isaac Sim completely
-   - Restart and re-enable the extension
+The extension now follows the standard Isaac Sim extension pattern:
 
-3. **Check Console for Errors**:
-   - Open **Window > Console**
-   - Look for import errors or dependency issues
-   - Common errors include missing dependencies or import path issues
+- **`extension.py`**: Main extension class that creates the UI window and menu
+- **`ui_builder.py`**: Contains all UI logic and RoboCopilot functionality
+- **`robocopilot_chat.py`**: Core stacking task implementation
+- **`global_variables.py`**: Extension title and description
+- **`extension.toml`**: Extension configuration with proper dependencies
 
-4. **Verify Extension Location**:
-   - Ensure the extension is in the correct `exts/` directory
-   - Check that the directory name matches the module name in `extension.toml`
+## Troubleshooting
 
-### Import Errors
-- The extension now uses relative imports compatible with Isaac Sim 4.5
-- If you see import errors, ensure all dependency extensions are enabled
-- Check that the extension directory structure is correct
+### Extension Not Appearing
+- Ensure the extension is enabled in the Extensions window
+- Check the Console for any import errors
+- Verify the directory structure matches the example above
 
-### Extension Loads but No UI
-- Ensure `omni.isaac.examples` extension is enabled
-- Check that the extension registers properly with the Examples browser
-- Look for UI-related errors in the console
+### Menu Item Missing
+- Look for "RoboCopilot Chat" in the Isaac Sim menu bar
+- If not visible, try disabling and re-enabling the extension
+- Restart Isaac Sim if necessary
+
+### Scene Loading Issues
+- Ensure Isaac Sim has the required Franka and manipulation extensions enabled
+- Check the Console for detailed error messages
+- Try clearing and reloading the scene
 
 ## Success Indicators
 
 ✅ Extension appears in Extensions window without errors  
-✅ No import errors in console  
-✅ "RoboCopilot Stack" appears in **Isaac Examples > Manipulation**  
-✅ Chat interface loads properly  
-✅ Execute Task button becomes enabled after loading scene  
-
-## If Extension Still Not Visible
-
-If the extension loads without errors but doesn't appear in the Isaac Examples menu:
-
-1. **Check Extension Registration**:
-   ```python
-   # Look for this in the console output
-   [Info] Registering example: RoboCopilot Stack in category: Manipulation
-   ```
-
-2. **Manual Access**:
-   - Try accessing through **Window > Extensions**
-   - Look for the extension in the "Third Party" or "Community" sections
-
-3. **Dependency Issues**:
-   - Disable and re-enable all Isaac extensions
-   - Restart Isaac Sim after enabling dependencies
+✅ "RoboCopilot Chat" menu item appears in Isaac Sim menu bar  
+✅ Extension window opens and docks properly  
+✅ Scene loads successfully with Franka robot and cubes  
+✅ Chat interface responds to user input  
+✅ Execute Task button works and runs stacking operation  
 
 ## Next Steps
 
-Once installed successfully:
-1. Load the scene using the **Load** button
-2. Enter commands like "Stack the cubes on top of each other"
-3. Click "🚀 Execute Task"
-4. Watch the Franka robot perform the stacking operation!
+1. **Enable the extension** in Isaac Sim Extensions window
+2. **Click "RoboCopilot Chat"** in the menu bar to open the window
+3. **Load the scene** using the Load Scene button
+4. **Enter commands** like "Stack the cubes on top of each other"
+5. **Execute tasks** and watch the Franka robot perform stacking operations!
 
-The extension performs the same cube stacking as the original Simple Stack but with an enhanced chat-based interface optimized for Isaac Sim 4.5. 
+The extension now operates as a fully standalone Isaac Sim extension with its own window and menu integration. 

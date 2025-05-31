@@ -1,3 +1,7 @@
+[core]
+reloadable = true
+order = 0
+
 [package]
 # Semantic Versionning is used: https://semver.org/
 version = "1.0.0"
@@ -6,7 +10,7 @@ version = "1.0.0"
 authors = ["NVIDIA"]
 
 # The title and description fields are primarily for displaying extension info in UI
-title = "RoboCopilot Stack Extension"
+title = "RoboCopilot Chat"
 description = "An AI-powered stacking interface with chat functionality for Isaac Sim manipulation tasks"
 
 # Path (relative to the root) or content of readme markdown file for UI.
@@ -31,19 +35,16 @@ icon = "data/icon.png"
 
 # Dependencies - Updated for Isaac Sim 4.5 compatibility
 [dependencies]
-"omni.isaac.examples" = {}
-"omni.isaac.manipulators" = {}
-"omni.isaac.franka" = {}
-"omni.isaac.core" = {}
-"omni.isaac.ui" = {}
-"omni.kit.ui" = {}
 "omni.kit.uiapp" = {}
 "isaacsim.gui.components" = {}
 "isaacsim.core.api" = {}
+"omni.isaac.manipulators" = {}
+"omni.isaac.franka" = {}
+"omni.isaac.core" = {}
 
 # Main module of this extension (entrypoint)
 [[python.module]]
-name = "robocopilot_chat"
+name = "robocopilot_chat_python"
 
 # Watch the .py files for hot reloading (only works for Python files), by default only .py files are watched
 [settings]

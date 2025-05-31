@@ -1,4 +1,4 @@
-# Copyright (c) 2021-2024, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2022-2024, NVIDIA CORPORATION. All rights reserved.
 #
 # NVIDIA CORPORATION and its licensors retain all intellectual property
 # and proprietary rights in and to this software, related documentation
@@ -13,23 +13,28 @@ from isaacsim.robot.manipulators.examples.franka.tasks import Stacking
 
 
 class RoboCopilotChat(BaseSample):
+    """RoboCopilot Chat implementation based on SimpleStack with enhanced logging and chat functionality"""
+    
     def __init__(self) -> None:
         super().__init__()
         self._controller = None
         self._articulation_controller = None
-        self._current_task_prompt = ""
-        self._task_status = "Ready"
         self._execution_log = []
+        self._current_status = "Ready"
 
     def setup_scene(self):
+        """Setup the scene with Franka robot and stacking task"""
         world = self.get_world()
         world.add_task(Stacking(name="stacking_task"))
+        self._log_message("Scene setup completed")
         return
 
     async def setup_post_load(self):
+        """Setup controllers after scene is loaded"""
         self._franka_task = self._world.get_task(name="stacking_task")
         self._task_params = self._franka_task.get_params()
         my_franka = self._world.scene.get_object(self._task_params["robot_name"]["value"])
+        
         self._controller = StackingController(
             name="stacking_controller",
             gripper=my_franka.gripper,
@@ -38,23 +43,26 @@ class RoboCopilotChat(BaseSample):
             robot_observation_name=my_franka.name,
         )
         self._articulation_controller = my_franka.get_articulation_controller()
+        self._log_message("Controllers initialized")
+        self._current_status = "Ready for execution"
         return
 
     def _on_stacking_physics_step(self, step_size):
+        """Physics step callback for stacking execution"""
         observations = self._world.get_observations()
         actions = self._controller.forward(observations=observations)
         self._articulation_controller.apply_action(actions)
+        
         if self._controller.is_done():
             self._world.pause()
-            self._task_status = "Task Completed Successfully"
-            self._execution_log.append("✓ Stacking task completed successfully")
+            self._log_message("Stacking task completed successfully")
+            self._current_status = "Task completed"
         return
 
-    async def _on_execute_task_async(self, prompt=""):
-        """Execute the stacking task with optional prompt context"""
-        self._current_task_prompt = prompt
-        self._task_status = "Executing Task..."
-        self._execution_log.append(f"🤖 Executing task: {prompt if prompt else 'Stack cubes'}")
+    async def _on_execute_task_async(self, prompt="Stack the cubes"):
+        """Execute the stacking task asynchronously with prompt context"""
+        self._log_message(f"Executing task: {prompt}")
+        self._current_status = "Executing task..."
         
         world = self.get_world()
         world.add_physics_callback("sim_step", self._on_stacking_physics_step)
@@ -62,30 +70,39 @@ class RoboCopilotChat(BaseSample):
         return
 
     async def setup_pre_reset(self):
+        """Cleanup before reset"""
         world = self.get_world()
         if world.physics_callback_exists("sim_step"):
             world.remove_physics_callback("sim_step")
-        self._controller.reset()
-        self._task_status = "Ready"
-        self._execution_log.append("🔄 System reset and ready for new task")
+        if self._controller:
+            self._controller.reset()
+        self._log_message("System reset")
+        self._current_status = "Reset completed"
         return
 
     def world_cleanup(self):
+        """Clean up world resources"""
         self._controller = None
+        self._log_message("World cleanup completed")
+        self._current_status = "Cleaned up"
         return
 
-    def get_task_status(self):
-        """Get current task execution status"""
-        return self._task_status
+    def _log_message(self, message):
+        """Add a message to the execution log"""
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        self._execution_log.append(f"[{timestamp}] {message}")
+        print(f"RoboCopilot: {message}")
 
     def get_execution_log(self):
-        """Get the execution log for display in chat window"""
-        return self._execution_log
+        """Get the current execution log"""
+        return self._execution_log.copy()
 
     def clear_execution_log(self):
         """Clear the execution log"""
         self._execution_log = []
+        self._log_message("Execution log cleared")
 
-    def add_log_entry(self, entry):
-        """Add an entry to the execution log"""
-        self._execution_log.append(entry) 
+    def get_current_status(self):
+        """Get the current system status"""
+        return self._current_status 
