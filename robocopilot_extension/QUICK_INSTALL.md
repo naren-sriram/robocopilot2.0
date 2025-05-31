@@ -1,8 +1,8 @@
 # Quick Installation Guide - RoboCopilot Extension
 
-## Fixed Import Issues ✅
+## Import Issues Fixed ✅
 
-The extension has been updated to fix the relative import issues. Here's how to install it properly:
+The extension has been updated to use relative imports, which should resolve the package import errors. Here's how to install it properly:
 
 ## Installation Steps
 
@@ -51,9 +51,16 @@ isaac_sim-*/exts/
 3. Click **Load** to initialize the scene
 4. Start using the chat interface!
 
+## Recent Fixes
+
+✅ **Import Error Fixed**: Changed from absolute imports (`from robocopilot_extension.module`) to relative imports (`from .module`)  
+✅ **Package Structure**: Proper Python package structure with relative imports  
+✅ **Isaac Sim Compatibility**: Follows Isaac Sim extension development patterns  
+
 ## Troubleshooting
 
 ### Import Errors
+- The extension now uses relative imports which should work properly
 - Ensure the directory is named `robocopilot_extension` (with underscore)
 - Check that all files are present in the extension directory
 - Restart Isaac Sim after copying the extension

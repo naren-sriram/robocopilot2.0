@@ -7,5 +7,5 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 #
 
-from robocopilot_extension.robocopilot_stack import RoboCopilotStack
-from robocopilot_extension.robocopilot_extension import RoboCopilotExtension 
+from .robocopilot_stack import RoboCopilotStack
+from .robocopilot_extension import RoboCopilotExtension 
