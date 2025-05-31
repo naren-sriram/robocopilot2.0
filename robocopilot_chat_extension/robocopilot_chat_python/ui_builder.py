@@ -12,6 +12,9 @@ from datetime import datetime
 
 import omni.ui as ui
 from isaacsim.core.api.world import World
+from isaacsim.examples.extension.core_connectors import LoadButton, ResetButton
+from isaacsim.gui.components.element_wrappers import CollapsableFrame
+from isaacsim.gui.components.ui_utils import get_style
 
 from .robocopilot_chat import RoboCopilotChat
 
@@ -24,6 +27,7 @@ class UIBuilder:
         self.task_ui_elements = {}
         self.robocopilot_sample = None
         self.world = None
+        self.wrapped_ui_elements = []  # For cleanup
 
     def on_menu_callback(self):
         """Called when the extension menu is opened"""
@@ -43,6 +47,11 @@ class UIBuilder:
 
     def cleanup(self):
         """Clean up resources"""
+        # Clean up wrapped UI elements
+        for ui_elem in self.wrapped_ui_elements:
+            if hasattr(ui_elem, 'cleanup'):
+                ui_elem.cleanup()
+        
         if self.robocopilot_sample:
             self.robocopilot_sample.world_cleanup()
         self.robocopilot_sample = None
@@ -90,19 +99,23 @@ class UIBuilder:
             ui.Label("Scene Management:", style={"font_size": 14})
 
             with ui.HStack(spacing=5):
-                load_btn = ui.Button(
+                self._load_btn = LoadButton(
+                    "Load Button", 
                     "🔄 Load Scene",
-                    height=30,
-                    clicked_fn=self._on_load_scene,
-                    style={"background_color": 0xFF00AA00}
+                    setup_scene_fn=self._setup_scene,
+                    setup_post_load_fn=self._setup_post_load
                 )
+                self._load_btn.set_world_settings(physics_dt=1 / 60.0, rendering_dt=1 / 60.0)
+                self.wrapped_ui_elements.append(self._load_btn)
 
-                reset_btn = ui.Button(
-                    "🔄 Reset Scene",
-                    height=30,
-                    clicked_fn=self._on_reset_scene,
-                    style={"background_color": 0xFFFFAA00}
+                self._reset_btn = ResetButton(
+                    "Reset Button",
+                    "🔄 Reset Scene", 
+                    pre_reset_fn=self._pre_reset,
+                    post_reset_fn=self._post_reset
                 )
+                self._reset_btn.enabled = False
+                self.wrapped_ui_elements.append(self._reset_btn)
 
                 clear_btn = ui.Button(
                     "🗑️ Clear Scene",
@@ -224,83 +237,83 @@ class UIBuilder:
         })
         self._update_chat_display()
 
-    def _on_load_scene(self):
-        """Load the RoboCopilot scene"""
+    def _setup_scene(self):
+        """Setup scene callback for LoadButton - creates the scene and adds objects to World"""
         try:
-            # Create new World instance first (this is required before setup_scene)
-            self.world = World()
-            
             # Create RoboCopilot sample
             if not self.robocopilot_sample:
                 self.robocopilot_sample = RoboCopilotChat()
             
-            # Setup the scene (this will add tasks to the world)
-            self.robocopilot_sample.setup_scene()
+            # Setup the scene (this will create stage and add objects)
+            success = self.robocopilot_sample.setup_scene()
             
-            # Update status
-            self.scene_status_label.text = "Loading scene..."
-            self.scene_status_label.style = {"color": 0xFFFFAA00, "font_size": 12}
-            self._add_chat_message("RoboCopilot", "🔄 Loading scene...")
+            if not success:
+                raise Exception("Failed to setup scene")
             
-            # Load the world asynchronously
-            asyncio.ensure_future(self._load_world_async())
+            # Get the world instance (created by LoadButton)
+            self.world = World.instance()
+            
+            self._add_chat_message("RoboCopilot", "🔄 Scene created successfully...")
             
         except Exception as e:
-            self.scene_status_label.text = f"Error loading scene: {str(e)}"
-            self.scene_status_label.style = {"color": 0xFFFF0000, "font_size": 12}
-            self._add_chat_message("RoboCopilot", f"❌ Error loading scene: {str(e)}")
-            print(f"Scene loading error: {e}")
+            self._add_chat_message("RoboCopilot", f"❌ Error setting up scene: {str(e)}")
+            print(f"Scene setup error: {e}")
             import traceback
             traceback.print_exc()
 
-    async def _load_world_async(self):
-        """Load the world asynchronously"""
+    def _setup_post_load(self):
+        """Post-load callback for LoadButton - setup controllers after World is initialized"""
         try:
-            # Initialize simulation context and reset world
-            await self.world.initialize_simulation_context_async()
-            await self.world.reset_async()
-            
-            # Setup post load (initialize controllers)
-            await self.robocopilot_sample.setup_post_load()
+            # Setup controllers
+            success = asyncio.ensure_future(self.robocopilot_sample.setup_post_load())
             
             # Update status
             self.scene_status_label.text = "Scene loaded successfully"
             self.scene_status_label.style = {"color": 0xFF00FF00, "font_size": 12}
             
-            # Enable execute button
+            # Enable buttons
+            self._reset_btn.enabled = True
             if "Execute Task" in self.task_ui_elements:
                 self.task_ui_elements["Execute Task"].enabled = True
             
             self._add_chat_message("RoboCopilot", "✅ Scene loaded successfully! Ready to execute tasks.")
             
         except Exception as e:
-            self.scene_status_label.text = f"Error loading scene: {str(e)}"
+            self.scene_status_label.text = f"Error in post-load: {str(e)}"
             self.scene_status_label.style = {"color": 0xFFFF0000, "font_size": 12}
-            self._add_chat_message("RoboCopilot", f"❌ Error loading scene: {str(e)}")
-            print(f"World loading error: {e}")
+            self._add_chat_message("RoboCopilot", f"❌ Error in post-load: {str(e)}")
+            print(f"Post-load error: {e}")
             import traceback
             traceback.print_exc()
 
-    def _on_reset_scene(self):
-        """Reset the scene"""
+    def _pre_reset(self):
+        """Pre-reset callback for ResetButton"""
         try:
-            if self.world:
-                self.world.reset()
+            if self.robocopilot_sample:
+                asyncio.ensure_future(self.robocopilot_sample.setup_pre_reset())
+        except Exception as e:
+            self._add_chat_message("RoboCopilot", f"❌ Error in pre-reset: {str(e)}")
 
+    def _post_reset(self):
+        """Post-reset callback for ResetButton"""
+        try:
             self.scene_status_label.text = "Scene reset"
             self.scene_status_label.style = {"color": 0xFFFFAA00, "font_size": 12}
             self._add_chat_message("RoboCopilot", "🔄 Scene reset successfully.")
-
         except Exception as e:
-            self._add_chat_message("RoboCopilot", f"❌ Error resetting scene: {str(e)}")
+            self._add_chat_message("RoboCopilot", f"❌ Error in post-reset: {str(e)}")
 
     def _on_clear_scene(self):
         """Clear the scene"""
         try:
+            if self.robocopilot_sample:
+                self.robocopilot_sample.world_cleanup()
+
             if self.world:
                 self.world.clear()
 
             self.robocopilot_sample = None
+            self.world = None
             self.scene_status_label.text = "Scene cleared"
             self.scene_status_label.style = {"color": 0xFF888888, "font_size": 12}
 

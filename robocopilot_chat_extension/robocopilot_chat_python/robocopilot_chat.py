@@ -7,85 +7,180 @@
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 #
 
-from isaacsim.examples.interactive.base_sample import BaseSample
-from isaacsim.robot.manipulators.examples.franka.controllers.stacking_controller import StackingController
-from isaacsim.robot.manipulators.examples.franka.tasks import Stacking
+import numpy as np
+from isaacsim.core.api.objects.cuboid import DynamicCuboid
+from isaacsim.core.api.world import World
+from isaacsim.core.prims import SingleArticulation, XFormPrim
+from isaacsim.core.utils.stage import add_reference_to_stage, create_new_stage, get_current_stage
+from isaacsim.storage.native import get_assets_root_path
+from pxr import Sdf, UsdLux
 
 
-class RoboCopilotChat(BaseSample):
-    """RoboCopilot Chat implementation based on SimpleStack with enhanced logging and chat functionality"""
+class RoboCopilotChat:
+    """RoboCopilot Chat implementation with custom scene building and stacking controller"""
 
     def __init__(self) -> None:
-        super().__init__()
         self._controller = None
         self._articulation_controller = None
         self._execution_log = []
         self._current_status = "Ready"
+        self._franka = None
+        self._cubes = []
+        self._world = None
 
-    def setup_scene(self, scene):
-        """Setup the scene with Franka robot and stacking task"""
-        world = self.get_world()
-        world.add_task(Stacking(name="stacking_task"))
-        self._log_message("Scene setup completed")
-        return
+    def setup_scene(self):
+        """Setup the scene with Franka robot and cubes"""
+        try:
+            # Create new stage
+            create_new_stage()
+            self._add_light_to_stage()
+            
+            # Load Franka robot
+            robot_prim_path = "/franka"
+            path_to_robot_usd = get_assets_root_path() + "/Isaac/Robots/Franka/franka.usd"
+            add_reference_to_stage(path_to_robot_usd, robot_prim_path)
+            
+            # Create Franka articulation
+            self._franka = SingleArticulation(robot_prim_path)
+            
+            # Create cubes for stacking
+            self._cubes = []
+            cube_positions = [
+                np.array([0.3, 0.3, 0.05]),  # Bottom cube
+                np.array([0.3, 0.1, 0.05]),  # Top cube (to be stacked)
+            ]
+            
+            for i, position in enumerate(cube_positions):
+                cube = DynamicCuboid(
+                    f"/World/cube_{i}",
+                    position=position,
+                    size=0.05,
+                    color=np.array([1.0, 0.0, 0.0]) if i == 0 else np.array([0.0, 1.0, 0.0])
+                )
+                self._cubes.append(cube)
+            
+            # Add objects to world (World will be created by LoadButton)
+            self._world = World.instance()
+            self._world.scene.add(self._franka)
+            for cube in self._cubes:
+                self._world.scene.add(cube)
+            
+            self._log_message("Scene setup completed with Franka robot and cubes")
+            return True
+            
+        except Exception as e:
+            self._log_message(f"Error setting up scene: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return False
+
+    def _add_light_to_stage(self):
+        """Add a light to the stage"""
+        sphereLight = UsdLux.SphereLight.Define(get_current_stage(), Sdf.Path("/World/SphereLight"))
+        sphereLight.CreateRadiusAttr(2)
+        sphereLight.CreateIntensityAttr(100000)
+        XFormPrim(str(sphereLight.GetPath())).set_world_poses(np.array([[6.5, 0, 12]]))
 
     async def setup_post_load(self):
         """Setup controllers after scene is loaded"""
-        self._franka_task = self._world.get_task(name="stacking_task")
-        self._task_params = self._franka_task.get_params()
-        my_franka = self._world.scene.get_object(self._task_params["robot_name"]["value"])
-
-        self._controller = StackingController(
-            name="stacking_controller",
-            gripper=my_franka.gripper,
-            robot_articulation=my_franka,
-            picking_order_cube_names=self._franka_task.get_cube_names(),
-            robot_observation_name=my_franka.name,
-        )
-        self._articulation_controller = my_franka.get_articulation_controller()
-        self._log_message("Controllers initialized")
-        self._current_status = "Ready for execution"
-        return
+        try:
+            # Import the stacking controller here to avoid dependency issues
+            from isaacsim.robot.manipulators.examples.franka.controllers.stacking_controller import StackingController
+            
+            # Get cube names for the controller
+            cube_names = [f"cube_{i}" for i in range(len(self._cubes))]
+            
+            # Initialize the stacking controller
+            self._controller = StackingController(
+                name="stacking_controller",
+                gripper=self._franka.gripper,
+                robot_articulation=self._franka,
+                picking_order_cube_names=cube_names,
+                robot_observation_name=self._franka.name,
+            )
+            
+            # Get articulation controller
+            self._articulation_controller = self._franka.get_articulation_controller()
+            
+            self._log_message("Controllers initialized successfully")
+            self._current_status = "Ready for execution"
+            return True
+            
+        except Exception as e:
+            self._log_message(f"Error setting up controllers: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return False
 
     def _on_stacking_physics_step(self, step_size):
         """Physics step callback for stacking execution"""
-        observations = self._world.get_observations()
-        actions = self._controller.forward(observations=observations)
-        self._articulation_controller.apply_action(actions)
+        if not self._controller or not self._articulation_controller:
+            return
+            
+        try:
+            observations = self._world.get_observations()
+            actions = self._controller.forward(observations=observations)
+            self._articulation_controller.apply_action(actions)
 
-        if self._controller.is_done():
+            if self._controller.is_done():
+                self._world.pause()
+                self._log_message("Stacking task completed successfully")
+                self._current_status = "Task completed"
+        except Exception as e:
+            self._log_message(f"Error in physics step: {str(e)}")
             self._world.pause()
-            self._log_message("Stacking task completed successfully")
-            self._current_status = "Task completed"
-        return
 
     async def _on_execute_task_async(self, prompt="Stack the cubes"):
         """Execute the stacking task asynchronously with prompt context"""
-        self._log_message(f"Executing task: {prompt}")
-        self._current_status = "Executing task..."
+        try:
+            self._log_message(f"Executing task: {prompt}")
+            self._current_status = "Executing task..."
 
-        world = self.get_world()
-        world.add_physics_callback("sim_step", self._on_stacking_physics_step)
-        await world.play_async()
-        return
+            if not self._world:
+                raise Exception("World not initialized")
+                
+            if not self._controller:
+                raise Exception("Controller not initialized")
+
+            # Reset controller
+            self._controller.reset()
+            
+            # Add physics callback
+            self._world.add_physics_callback("sim_step", self._on_stacking_physics_step)
+            
+            # Start simulation
+            await self._world.play_async()
+            
+        except Exception as e:
+            self._log_message(f"Error executing task: {str(e)}")
+            self._current_status = "Task failed"
+            raise
 
     async def setup_pre_reset(self):
         """Cleanup before reset"""
-        world = self.get_world()
-        if world.physics_callback_exists("sim_step"):
-            world.remove_physics_callback("sim_step")
-        if self._controller:
-            self._controller.reset()
-        self._log_message("System reset")
-        self._current_status = "Reset completed"
-        return
+        try:
+            if self._world and self._world.physics_callback_exists("sim_step"):
+                self._world.remove_physics_callback("sim_step")
+            if self._controller:
+                self._controller.reset()
+            self._log_message("System reset")
+            self._current_status = "Reset completed"
+        except Exception as e:
+            self._log_message(f"Error in pre-reset: {str(e)}")
 
     def world_cleanup(self):
         """Clean up world resources"""
-        self._controller = None
-        self._log_message("World cleanup completed")
-        self._current_status = "Cleaned up"
-        return
+        try:
+            if self._world and self._world.physics_callback_exists("sim_step"):
+                self._world.remove_physics_callback("sim_step")
+            self._controller = None
+            self._articulation_controller = None
+            self._franka = None
+            self._cubes = []
+            self._log_message("World cleanup completed")
+            self._current_status = "Cleaned up"
+        except Exception as e:
+            self._log_message(f"Error in cleanup: {str(e)}")
 
     def _log_message(self, message):
         """Add a message to the execution log"""
