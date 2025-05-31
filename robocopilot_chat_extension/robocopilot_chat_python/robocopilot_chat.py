@@ -14,7 +14,7 @@ from isaacsim.robot.manipulators.examples.franka.tasks import Stacking
 
 class RoboCopilotChat(BaseSample):
     """RoboCopilot Chat implementation based on SimpleStack with enhanced logging and chat functionality"""
-    
+
     def __init__(self) -> None:
         super().__init__()
         self._controller = None
@@ -22,7 +22,7 @@ class RoboCopilotChat(BaseSample):
         self._execution_log = []
         self._current_status = "Ready"
 
-    def setup_scene(self):
+    def setup_scene(self, scene):
         """Setup the scene with Franka robot and stacking task"""
         world = self.get_world()
         world.add_task(Stacking(name="stacking_task"))
@@ -34,7 +34,7 @@ class RoboCopilotChat(BaseSample):
         self._franka_task = self._world.get_task(name="stacking_task")
         self._task_params = self._franka_task.get_params()
         my_franka = self._world.scene.get_object(self._task_params["robot_name"]["value"])
-        
+
         self._controller = StackingController(
             name="stacking_controller",
             gripper=my_franka.gripper,
@@ -52,7 +52,7 @@ class RoboCopilotChat(BaseSample):
         observations = self._world.get_observations()
         actions = self._controller.forward(observations=observations)
         self._articulation_controller.apply_action(actions)
-        
+
         if self._controller.is_done():
             self._world.pause()
             self._log_message("Stacking task completed successfully")
@@ -63,7 +63,7 @@ class RoboCopilotChat(BaseSample):
         """Execute the stacking task asynchronously with prompt context"""
         self._log_message(f"Executing task: {prompt}")
         self._current_status = "Executing task..."
-        
+
         world = self.get_world()
         world.add_physics_callback("sim_step", self._on_stacking_physics_step)
         await world.play_async()
@@ -105,4 +105,4 @@ class RoboCopilotChat(BaseSample):
 
     def get_current_status(self):
         """Get the current system status"""
-        return self._current_status 
+        return self._current_status
