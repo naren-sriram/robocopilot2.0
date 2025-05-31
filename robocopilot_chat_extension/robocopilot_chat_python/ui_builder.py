@@ -79,7 +79,7 @@ class UIBuilder:
 
             # Chat Interface Section
             with ui.CollapsableFrame(
-                title="💬 Chat Interface",
+                title="Chat Interface",
                 height=300,
                 collapsed=False,
             ):
@@ -101,7 +101,7 @@ class UIBuilder:
             with ui.HStack(spacing=5):
                 self._load_btn = LoadButton(
                     "Load Button", 
-                    "🔄 Load Scene",
+                    "Load Scene",
                     setup_scene_fn=self._setup_scene,
                     setup_post_load_fn=self._setup_post_load
                 )
@@ -110,7 +110,7 @@ class UIBuilder:
 
                 self._reset_btn = ResetButton(
                     "Reset Button",
-                    "🔄 Reset Scene", 
+                    "Reset Scene", 
                     pre_reset_fn=self._pre_reset,
                     post_reset_fn=self._post_reset
                 )
@@ -173,15 +173,16 @@ class UIBuilder:
             # Control buttons
             with ui.HStack(spacing=5):
                 execute_btn = ui.Button(
-                    "🚀 Execute Task",
+                    "Execute Task",
                     height=35,
                     clicked_fn=self._on_execute_task,
                     style={"background_color": 0xFF0066CC, "color": 0xFFFFFFFF, "font_size": 14}
                 )
+                execute_btn.enabled = False  # Disabled until scene is loaded
                 self.task_ui_elements["Execute Task"] = execute_btn
 
                 clear_chat_btn = ui.Button(
-                    "🗑️ Clear Chat",
+                    "Clear Chat",
                     height=35,
                     clicked_fn=self._on_clear_chat,
                     style={"background_color": 0xFF666666, "color": 0xFFFFFFFF}
@@ -256,11 +257,17 @@ class UIBuilder:
             # Get the world instance (created by LoadButton)
             self.world = World.instance()
             
-            self._add_chat_message("RoboCopilot", "🔄 Scene created successfully...")
+            # Update scene status immediately
+            self.scene_status_label.text = "Scene setup completed"
+            self.scene_status_label.style = {"color": 0xFF00FF00, "font_size": 12}
+            
+            self._add_chat_message("RoboCopilot", "Scene created successfully...")
             
         except Exception as e:
             # Clear the sample if setup failed
             self.robocopilot_sample = None
+            self.scene_status_label.text = f"Scene setup failed: {str(e)}"
+            self.scene_status_label.style = {"color": 0xFFFF0000, "font_size": 12}
             self._add_chat_message("RoboCopilot", f"Error setting up scene: {str(e)}")
             print(f"Scene setup error: {e}")
             import traceback
@@ -290,23 +297,32 @@ class UIBuilder:
                 raise Exception("RoboCopilot sample not initialized")
             
             # Setup controllers
-            await self.robocopilot_sample.setup_post_load()
+            success = await self.robocopilot_sample.setup_post_load()
+            
+            if not success:
+                raise Exception("Failed to setup controllers")
             
             # Update status
             self.scene_status_label.text = "Scene loaded successfully"
             self.scene_status_label.style = {"color": 0xFF00FF00, "font_size": 12}
             
             # Enable buttons
-            self._reset_btn.enabled = True
+            if hasattr(self, '_reset_btn'):
+                self._reset_btn.enabled = True
             if "Execute Task" in self.task_ui_elements:
                 self.task_ui_elements["Execute Task"].enabled = True
             
             self._add_chat_message("RoboCopilot", "Scene loaded successfully! Ready to execute tasks.")
             
         except Exception as e:
-            self.scene_status_label.text = f"Error in async post-load: {str(e)}"
+            # Clear sample on controller setup failure
+            if self.robocopilot_sample:
+                self.robocopilot_sample.world_cleanup()
+                self.robocopilot_sample = None
+                
+            self.scene_status_label.text = f"Controller setup failed: {str(e)}"
             self.scene_status_label.style = {"color": 0xFFFF0000, "font_size": 12}
-            self._add_chat_message("RoboCopilot", f"Error in async post-load: {str(e)}")
+            self._add_chat_message("RoboCopilot", f"Error in controller setup: {str(e)}")
             print(f"Async post-load error: {e}")
             import traceback
             traceback.print_exc()
@@ -331,18 +347,23 @@ class UIBuilder:
     def _on_clear_scene(self):
         """Clear the scene"""
         try:
+            # Clean up RoboCopilot sample first
             if self.robocopilot_sample:
                 self.robocopilot_sample.world_cleanup()
+                self.robocopilot_sample = None
 
+            # Clear the world
             if self.world:
                 self.world.clear()
+                self.world = None
 
-            self.robocopilot_sample = None
-            self.world = None
+            # Update UI state
             self.scene_status_label.text = "Scene cleared"
             self.scene_status_label.style = {"color": 0xFF888888, "font_size": 12}
 
-            # Disable execute button
+            # Disable buttons
+            if hasattr(self, '_reset_btn'):
+                self._reset_btn.enabled = False
             if "Execute Task" in self.task_ui_elements:
                 self.task_ui_elements["Execute Task"].enabled = False
 
@@ -350,6 +371,7 @@ class UIBuilder:
 
         except Exception as e:
             self._add_chat_message("RoboCopilot", f"Error clearing scene: {str(e)}")
+            print(f"Clear scene error: {e}")
 
     def _on_send_message(self):
         """Handle sending a message"""
@@ -365,8 +387,13 @@ class UIBuilder:
         if not prompt:
             prompt = "Stack the cubes"
 
+        # Check if scene is properly loaded
         if not self.robocopilot_sample:
             self._add_chat_message("RoboCopilot", "Please load the scene first!")
+            return
+            
+        if not self.world:
+            self._add_chat_message("RoboCopilot", "World not initialized. Please load the world first!")
             return
 
         self.current_prompt = prompt
