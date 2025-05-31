@@ -33,14 +33,22 @@ preview_image = "data/preview.png"
 # Icon is shown in Extensions window, it is recommended to be square, of size 256x256.
 icon = "data/icon.png"
 
-# Dependencies - Updated for Isaac Sim 4.5 compatibility
+# Dependencies - Complete dependencies for stacking functionality
 [dependencies]
 "omni.kit.uiapp" = {}
+"omni.isaac.core" = {}
+"omni.isaac.franka" = {}
+"omni.isaac.manipulators" = {}
+"omni.isaac.examples" = {}
 "isaacsim.gui.components" = {}
 "isaacsim.core.api" = {}
-"omni.isaac.manipulators" = {}
-"omni.isaac.franka" = {}
-"omni.isaac.core" = {}
+"isaacsim.robot.manipulators" = {}
+"isaacsim.examples.interactive" = {}
+"isaacsim.storage.native" = {}
+"omni.isaac.ui" = {}
+"omni.kit.ui" = {}
+"omni.usd" = {}
+"omni.timeline" = {}
 
 # Main module of this extension (entrypoint)
 [[python.module]]

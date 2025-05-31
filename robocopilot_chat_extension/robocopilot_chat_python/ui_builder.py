@@ -11,7 +11,7 @@ import asyncio
 from datetime import datetime
 
 import omni.ui as ui
-from omni.isaac.core import World
+from isaacsim.core.api.world import World
 
 from .robocopilot_chat import RoboCopilotChat
 
@@ -224,35 +224,62 @@ class UIBuilder:
         })
         self._update_chat_display()
 
-    async def _on_load_scene(self):
+    def _on_load_scene(self):
         """Load the RoboCopilot scene"""
         try:
-            # Initialize World if not exists
-            if not self.world:
-                self.world = World.instance()
-                if not self.world:
-                    self.world = World()
-
+            # Create new World instance first (this is required before setup_scene)
+            self.world = World()
+            
             # Create RoboCopilot sample
             if not self.robocopilot_sample:
                 self.robocopilot_sample = RoboCopilotChat()
-                await self.robocopilot_sample.load_world_async()
-                self.robocopilot_sample.setup_scene()
-
+            
+            # Setup the scene (this will add tasks to the world)
+            self.robocopilot_sample.setup_scene()
+            
             # Update status
-            self.scene_status_label.text = "Scene loaded successfully"
-            self.scene_status_label.style = {"color": 0xFF00FF00, "font_size": 12}
-
-            # Enable execute button
-            if "Execute Task" in self.task_ui_elements:
-                self.task_ui_elements["Execute Task"].enabled = True
-
-            self._add_chat_message("RoboCopilot", "✅ Scene loaded successfully! Ready to execute tasks.")
-
+            self.scene_status_label.text = "Loading scene..."
+            self.scene_status_label.style = {"color": 0xFFFFAA00, "font_size": 12}
+            self._add_chat_message("RoboCopilot", "🔄 Loading scene...")
+            
+            # Load the world asynchronously
+            asyncio.ensure_future(self._load_world_async())
+            
         except Exception as e:
             self.scene_status_label.text = f"Error loading scene: {str(e)}"
             self.scene_status_label.style = {"color": 0xFFFF0000, "font_size": 12}
             self._add_chat_message("RoboCopilot", f"❌ Error loading scene: {str(e)}")
+            print(f"Scene loading error: {e}")
+            import traceback
+            traceback.print_exc()
+
+    async def _load_world_async(self):
+        """Load the world asynchronously"""
+        try:
+            # Initialize simulation context and reset world
+            await self.world.initialize_simulation_context_async()
+            await self.world.reset_async()
+            
+            # Setup post load (initialize controllers)
+            await self.robocopilot_sample.setup_post_load()
+            
+            # Update status
+            self.scene_status_label.text = "Scene loaded successfully"
+            self.scene_status_label.style = {"color": 0xFF00FF00, "font_size": 12}
+            
+            # Enable execute button
+            if "Execute Task" in self.task_ui_elements:
+                self.task_ui_elements["Execute Task"].enabled = True
+            
+            self._add_chat_message("RoboCopilot", "✅ Scene loaded successfully! Ready to execute tasks.")
+            
+        except Exception as e:
+            self.scene_status_label.text = f"Error loading scene: {str(e)}"
+            self.scene_status_label.style = {"color": 0xFFFF0000, "font_size": 12}
+            self._add_chat_message("RoboCopilot", f"❌ Error loading scene: {str(e)}")
+            print(f"World loading error: {e}")
+            import traceback
+            traceback.print_exc()
 
     def _on_reset_scene(self):
         """Reset the scene"""
