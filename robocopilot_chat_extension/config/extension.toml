@@ -37,8 +37,7 @@ icon = "data/icon.png"
 [dependencies]
 "omni.kit.uiapp" = {}
 "omni.isaac.core" = {}
-"omni.isaac.franka" = {}
-"omni.isaac.examples" = {}
+"omni.isaac.examples.franka" = {}
 "isaacsim.core.api" = {}
 "isaacsim.gui.components" = {}
 "isaacsim.examples.extension" = {}
@@ -49,17 +48,6 @@ icon = "data/icon.png"
 # Main module of this extension (entrypoint)
 [[python.module]]
 name = "robocopilot_chat_python"
-paths = ["${python.interpreter}/../lib/python3.10/site-packages"]
-
-# Python package dependencies
-[[python.requirements]]
-package = "groq"
-version = "==0.24.0"
-pip_install = true
-
-# Force pip to install packages with specific flags
-[python.pipargs]
-install = ["--no-deps", "--force-reinstall", "--ignore-installed", "--no-cache-dir"]
 
 # Watch the .py files for hot reloading (only works for Python files), by default only .py files are watched
 [settings]
