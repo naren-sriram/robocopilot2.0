@@ -106,7 +106,7 @@ class RoboCopilotChat:
             # Import the stacking controller here to avoid dependency issues
             self._log_message("Importing StackingController...")
             try:
-                from omni.isaac.examples.franka.controllers.stacking_controller import StackingController
+                from omni.isaac.franka.controllers.stacking_controller import StackingController
                 self._log_message("StackingController imported successfully")
             except ImportError as e:
                 self._log_message(f"Failed to import StackingController: {str(e)}")

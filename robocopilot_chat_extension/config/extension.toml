@@ -37,14 +37,13 @@ icon = "data/icon.png"
 [dependencies]
 "omni.kit.uiapp" = {}
 "omni.isaac.core" = {}
-"omni.isaac.franka" = {}
-"omni.isaac.examples" = {}
 "isaacsim.core.api" = {}
 "isaacsim.gui.components" = {}
 "isaacsim.examples.extension" = {}
 "isaacsim.storage.native" = {}
 "omni.usd" = {}
 "omni.timeline" = {}
+"omni.kit.pipapi" = {}
 
 # Main module of this extension (entrypoint)
 [[python.module]]

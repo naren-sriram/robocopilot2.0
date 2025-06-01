@@ -492,16 +492,20 @@ class UIBuilder:
                 stream=True
             )
 
+            # Add initial empty message for RoboCopilot
+            self._add_chat_message("RoboCopilot", "")
+            
             # Initialize response accumulator
             full_response = ""
 
-            # Stream the response
+            # Stream the response and update the last message
             for chunk in completion:
                 if chunk.choices[0].delta.content is not None:
                     content = chunk.choices[0].delta.content
                     full_response += content
-                    # Update the chat display with the accumulated response
-                    self._add_chat_message("RoboCopilot", full_response)
+                    # Update the last message instead of adding new ones
+                    self.chat_messages[-1]["text"] = full_response
+                    self._update_chat_display()
 
             # Store the prompt for task execution
             self.current_prompt = user_message
