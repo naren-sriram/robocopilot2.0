@@ -13,6 +13,8 @@ from isaacsim.core.api.world import World
 from isaacsim.core.prims import SingleArticulation, XFormPrim
 from isaacsim.core.utils.stage import add_reference_to_stage, create_new_stage, get_current_stage
 from isaacsim.storage.native import get_assets_root_path
+from omni.isaac.franka.controllers import PickPlaceController
+
 from pxr import Sdf, UsdLux
 
 
@@ -27,7 +29,9 @@ class RoboCopilotChat:
         self._franka = None
         self._cubes = []
         self._world = None
-        self._cube_positions = []  # Store actual cube positions
+        self._cube_positions = [] 
+        self._goal_position = [] 
+        self.prompt = ""
 
     def setup_scene(self):
         """Setup the scene with Franka robot and cubes"""
@@ -74,12 +78,13 @@ class RoboCopilotChat:
                     color = np.array([1.0, 0.0, 0.0])  # Red
                 else:
                     color = np.array([0.0, 1.0, 0.0])  # Green
+                colors = ['red', 'green']
                 cube = DynamicCuboid(
                     f"/World/cube_{i}",
                     position=position,
                     size=0.05,
                     color=color,
-                    name=f"cube_{i}"
+                    name=f"cube_{colors[i]}"
                 )
                 self._cubes.append(cube)
 
@@ -116,15 +121,15 @@ class RoboCopilotChat:
     async def setup_post_load(self):
         """Setup stacking controller with custom cube coordinates"""
         try:
-            self._log_message("Starting stacking controller setup with custom coordinates...")
+            self._log_message("Starting pickplace controller setup with custom coordinates...")
 
             # Import the stacking controller
-            self._log_message("Importing StackingController...")
+            self._log_message("Importing PickPlaceController...")
             try:
-                from omni.isaac.franka.controllers.stacking_controller import StackingController
-                self._log_message("StackingController imported successfully")
+                from omni.isaac.franka.controllers import PickPlaceController
+                self._log_message("PickPlaceController imported successfully")
             except ImportError as e:
-                self._log_message(f"Failed to import StackingController: {str(e)}")
+                self._log_message(f"Failed to import PickPlaceController: {str(e)}")
                 self._log_message("Make sure omni.isaac.examples extension is loaded")
                 raise
 
@@ -144,7 +149,7 @@ class RoboCopilotChat:
             for i, cube in enumerate(self._cubes):
                 cube_position, cube_rotation = cube.get_world_pose()
                 self._cube_positions.append(cube_position)
-                cube_names.append(f"cube_{i}")
+                cube_names.append(cube.name)
                 self._log_message(f"Cube {i} ({cube.name}) at position: {cube_position}")
 
             # Validate that cubes exist in the world scene
@@ -189,15 +194,13 @@ class RoboCopilotChat:
             self._log_message(f"Using gripper: {gripper}")
             
             # Initialize the stacking controller with cube coordinates
-            self._log_message("Creating StackingController with custom cube positions...")
-            self._controller = StackingController(
-                name="stacking_controller",
+            self._log_message("Creating PickPlaceController with custom cube positions...")
+            self._controller = PickPlaceController(
+                name="pick_place_controller",
                 gripper=gripper,
                 robot_articulation=self._franka,
-                picking_order_cube_names=cube_names,
-                robot_observation_name=self._franka.name,
             )
-            self._log_message("StackingController created successfully")
+            self._log_message("PickPlaceController created successfully")
 
             # IMPORTANT: Configure the controller with actual cube positions
             self._log_message("Configuring controller with actual cube coordinates...")
@@ -296,6 +299,20 @@ class RoboCopilotChat:
             
         except Exception as e:
             self._log_message(f"Error updating observations: {str(e)}")
+    
+    # Simpler approach for your specific case
+    def extract_colors_simple(prompt):
+        words = prompt.lower().split()
+        colors = ['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'black', 'white', 'gray', 'brown']
+        
+        found_colors = [word for word in words if word in colors]
+        
+        pick_color = found_colors[0] if len(found_colors) > 0 else None
+        place_color = found_colors[1] if len(found_colors) > 1 else None
+        
+        return pick_color, place_color
+
+
 
     def _on_stacking_physics_step(self, step_size):
         """Physics step callback for stacking execution with custom cube coordinates"""
@@ -317,9 +334,18 @@ class RoboCopilotChat:
                     if isinstance(value, dict):
                         self._log_message(f"  {key}: {list(value.keys())}")
                 self._obs_logged = True
-            
+            # extract pick and place positions from prompt
+            pick_color, place_color = self.extract_colors_simple(self.prompt)
+
+            #place position should be 0.1m above the pick position
+            place_position = observations[f"cube_{pick_color}"]["position"] + np.array([0.0, 0.0, 0.1])
+
             # Get actions from stacking controller
-            actions = self._controller.forward(observations=observations)
+            actions = self._controller.forward(
+                picking_position=observations[f"cube_{pick_color}"]["position"],
+                placing_position=place_position,
+                current_joint_positions=observations[self._franka.name]["joint_positions"],
+            )
             if actions is None:
                 self._log_message("Warning: No actions received from controller")
                 return
@@ -353,6 +379,7 @@ class RoboCopilotChat:
         try:
             self._log_message(f"Executing stacking task: {prompt}")
             self._current_status = "Executing task..."
+            self.prompt = prompt
 
             if not self._world:
                 raise Exception("World not initialized")
