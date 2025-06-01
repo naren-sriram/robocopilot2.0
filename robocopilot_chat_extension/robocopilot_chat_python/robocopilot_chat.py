@@ -8,7 +8,7 @@
 #
 
 import numpy as np
-from isaacsim.core.api.objects.cuboid import DynamicCuboid
+from isaacsim.core.api.objects.cuboid import DynamicCuboid, FixedCuboid
 from isaacsim.core.api.world import World
 from isaacsim.core.prims import SingleArticulation, XFormPrim
 from isaacsim.core.utils.stage import add_reference_to_stage, create_new_stage, get_current_stage
@@ -39,6 +39,16 @@ class RoboCopilotChat:
             create_new_stage()
             self._add_light_to_stage()
 
+            # Add ground plane first for physics support
+            self._log_message("Adding ground plane...")
+            ground_plane = FixedCuboid(
+                prim_path="/World/GroundPlane",
+                name="ground_plane",
+                position=np.array([0.0, 0.0, -0.05]),
+                size=np.array([2.0, 2.0, 0.1]),
+                color=np.array([0.5, 0.5, 0.5])  # Gray
+            )
+
             # Load Franka robot
             self._log_message("Loading Franka robot...")
             robot_prim_path = "/franka"
@@ -49,7 +59,7 @@ class RoboCopilotChat:
             self._log_message("Creating Franka articulation...")
             self._franka = SingleArticulation(robot_prim_path)
 
-            # Create cubes for stacking
+            # Create cubes for stacking - positioned higher to avoid falling through ground
             self._log_message("Creating cubes...")
             self._cubes = []
             cube_positions = [
@@ -61,9 +71,9 @@ class RoboCopilotChat:
                 self._log_message(f"Creating cube {i}...")
                 # cubes should be of different colors - red and green
                 if i == 0:
-                    color = np.array([1.0, 0.0, 0.0])
+                    color = np.array([1.0, 0.0, 0.0])  # Red
                 else:
-                    color = np.array([0.0, 1.0, 0.0])
+                    color = np.array([0.0, 1.0, 0.0])  # Green
                 cube = DynamicCuboid(
                     f"/World/cube_{i}",
                     position=position,
@@ -78,7 +88,11 @@ class RoboCopilotChat:
             self._world = World.instance()
 
             self._log_message("Adding objects to World...")
+            # Add ground plane first
+            self._world.scene.add(ground_plane)
+            # Add robot
             self._world.scene.add(self._franka)
+            # Add cubes
             for i, cube in enumerate(self._cubes):
                 self._log_message(f"Adding cube {i} to World...")
                 self._world.scene.add(cube)
@@ -217,6 +231,18 @@ class RoboCopilotChat:
                 raise Exception("Failed to get articulation controller from Franka")
             self._log_message("Articulation controller obtained successfully")
 
+            # IMPORTANT: Setup observations for the World
+            self._log_message("Setting up World observations...")
+            
+            # Add robot observations
+            self._world.add_physics_callback("observations", self._update_observations)
+            
+            # Initialize observations dictionary
+            self._observations = {}
+            self._update_observations(0.0)  # Initial update
+            
+            self._log_message("World observations configured")
+
             self._log_message("Stacking controller with custom coordinates initialized successfully")
             self._current_status = "Ready for execution"
             return True
@@ -230,37 +256,67 @@ class RoboCopilotChat:
             traceback.print_exc()
             return False
 
+    def _update_observations(self, step_size):
+        """Update observations for the World"""
+        try:
+            if not self._franka or not self._cubes:
+                return
+            
+            # Get robot state
+            joint_positions = self._franka.get_joint_positions()
+            joint_velocities = self._franka.get_joint_velocities()
+            
+            # Get end effector pose
+            if hasattr(self._franka, 'end_effector'):
+                ee_position, ee_orientation = self._franka.end_effector.get_world_pose()
+            else:
+                ee_position = np.array([0.0, 0.0, 0.0])
+                ee_orientation = np.array([1.0, 0.0, 0.0, 0.0])
+            
+            # Update observations dictionary
+            self._observations = {
+                self._franka.name: {
+                    "joint_positions": joint_positions,
+                    "joint_velocities": joint_velocities,
+                    "end_effector_position": ee_position,
+                    "end_effector_orientation": ee_orientation,
+                }
+            }
+            
+            # Add cube observations
+            for i, cube in enumerate(self._cubes):
+                cube_position, cube_orientation = cube.get_world_pose()
+                cube_velocity = cube.get_linear_velocity()
+                
+                self._observations[f"cube_{i}"] = {
+                    "position": cube_position,
+                    "orientation": cube_orientation,
+                    "linear_velocity": cube_velocity,
+                }
+            
+        except Exception as e:
+            self._log_message(f"Error updating observations: {str(e)}")
+
     def _on_stacking_physics_step(self, step_size):
         """Physics step callback for stacking execution with custom cube coordinates"""
         if not self._controller or not self._articulation_controller:
             return
 
         try:
-            # Get observations from world
-            observations = self._world.get_observations()
+            # Use our custom observations instead of World.get_observations()
+            observations = getattr(self, '_observations', {})
             if not observations:
-                self._log_message("Warning: No observations received from world")
+                self._log_message("Warning: No custom observations available")
                 return
             
             # Log observation keys for debugging (only first few times)
             if not hasattr(self, '_obs_logged'):
-                if hasattr(observations, 'keys'):
-                    obs_keys = list(observations.keys())
-                    self._log_message(f"Available observation keys: {obs_keys}")
-                else:
-                    self._log_message(f"Observations type: {type(observations)}")
+                obs_keys = list(observations.keys())
+                self._log_message(f"Available observation keys: {obs_keys}")
+                for key, value in observations.items():
+                    if isinstance(value, dict):
+                        self._log_message(f"  {key}: {list(value.keys())}")
                 self._obs_logged = True
-            
-            # Update cube positions in observations if needed
-            # The stacking controller expects cube positions in observations
-            if hasattr(observations, 'update') and self._cube_positions:
-                # Add current cube positions to observations
-                for i, cube_pos in enumerate(self._cube_positions):
-                    # Update with current cube position from scene
-                    if i < len(self._cubes):
-                        current_pos, _ = self._cubes[i].get_world_pose()
-                        observations[f"cube_{i}_position"] = current_pos
-                        observations[f"cube_{i}_orientation"] = np.array([1.0, 0.0, 0.0, 0.0])
             
             # Get actions from stacking controller
             actions = self._controller.forward(observations=observations)
@@ -324,6 +380,8 @@ class RoboCopilotChat:
         try:
             if self._world and self._world.physics_callback_exists("sim_step"):
                 self._world.remove_physics_callback("sim_step")
+            if self._world and self._world.physics_callback_exists("observations"):
+                self._world.remove_physics_callback("observations")
             if self._controller:
                 self._controller.reset()
             self._log_message("System reset")
@@ -336,11 +394,14 @@ class RoboCopilotChat:
         try:
             if self._world and self._world.physics_callback_exists("sim_step"):
                 self._world.remove_physics_callback("sim_step")
+            if self._world and self._world.physics_callback_exists("observations"):
+                self._world.remove_physics_callback("observations")
             self._controller = None
             self._articulation_controller = None
             self._franka = None
             self._cubes = []
             self._cube_positions = []
+            self._observations = {}
             self._log_message("World cleanup completed")
             self._current_status = "Cleaned up"
         except Exception as e:
