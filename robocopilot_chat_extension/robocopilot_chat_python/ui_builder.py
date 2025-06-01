@@ -6,6 +6,7 @@
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 #
+import os
 import asyncio
 from datetime import datetime
 
@@ -40,10 +41,14 @@ class UIBuilder:
 
     def _setup_groq(self):
         """Setup groq client with runtime installation"""
+        # Get API key from environment variable
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise Exception("GROQ_API_KEY environment variable is not set")
         try:
             # Try to import first
             import groq
-            self.groq_client = groq.Groq(api_key="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")
+            self.groq_client = groq.Groq(api_key=api_key)
             self.groq_available = True
             print("Groq already available")
         except ImportError:
@@ -51,16 +56,16 @@ class UIBuilder:
                 # Install at runtime using Isaac Sim's pip
                 import omni.kit.pipapi
                 omni.kit.pipapi.install("groq", version="0.24.0")
-                
+
                 # Now import after installation
                 import groq
-                self.groq_client = groq.Groq(api_key="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")
+                self.groq_client = groq.Groq(api_key=api_key)
                 self.groq_available = True
                 print("Groq installed and configured successfully")
             except Exception as e:
                 print(f"Failed to install/setup groq: {e}")
                 self.groq_available = False
-        
+
         return self.groq_available, self.groq_client
 
     def on_menu_callback(self):
@@ -494,7 +499,7 @@ class UIBuilder:
 
             # Add initial empty message for RoboCopilot
             self._add_chat_message("RoboCopilot", "")
-            
+
             # Initialize response accumulator
             full_response = ""
 
