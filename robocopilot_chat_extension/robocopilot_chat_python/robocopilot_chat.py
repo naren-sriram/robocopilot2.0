@@ -58,11 +58,16 @@ class RoboCopilotChat:
             
             for i, position in enumerate(cube_positions):
                 self._log_message(f"Creating cube {i}...")
+                # cubes should be of different colors - red and green
+                if i == 0:
+                    color = np.array([1.0, 0.0, 0.0])
+                else:
+                    color = np.array([0.0, 1.0, 0.0])
                 cube = DynamicCuboid(
                     f"/World/cube_{i}",
                     position=position,
                     size=0.05,
-                    color=np.array([0.0, 1.0, 0.0]),
+                    color=color,
                     name=f"cube_{i}"
                 )
                 self._cubes.append(cube)
@@ -96,13 +101,39 @@ class RoboCopilotChat:
     async def setup_post_load(self):
         """Setup controllers after scene is loaded"""
         try:
+            self._log_message("Starting controller setup...")
+            
             # Import the stacking controller here to avoid dependency issues
-            from isaacsim.robot.manipulators.examples.franka.controllers.stacking_controller import StackingController
+            self._log_message("Importing StackingController...")
+            try:
+                from omni.isaac.examples.franka.controllers.stacking_controller import StackingController
+                self._log_message("StackingController imported successfully")
+            except ImportError as e:
+                self._log_message(f"Failed to import StackingController: {str(e)}")
+                self._log_message("Make sure omni.isaac.examples extension is loaded")
+                raise
+            
+            # Validate required objects
+            if not self._franka:
+                raise Exception("Franka robot not initialized")
+            if not self._cubes:
+                raise Exception("Cubes not created")
+            if len(self._cubes) == 0:
+                raise Exception("No cubes found for stacking")
+                
+            self._log_message(f"Found {len(self._cubes)} cubes for stacking")
             
             # Get cube names for the controller
             cube_names = [f"cube_{i}" for i in range(len(self._cubes))]
+            self._log_message(f"Cube names for controller: {cube_names}")
+            
+            # Check if gripper exists
+            if not hasattr(self._franka, 'gripper') or self._franka.gripper is None:
+                raise Exception("Franka gripper not found or not initialized")
+            self._log_message("Franka gripper validated")
             
             # Initialize the stacking controller
+            self._log_message("Creating StackingController instance...")
             self._controller = StackingController(
                 name="stacking_controller",
                 gripper=self._franka.gripper,
@@ -110,9 +141,14 @@ class RoboCopilotChat:
                 picking_order_cube_names=cube_names,
                 robot_observation_name=self._franka.name,
             )
+            self._log_message("StackingController created successfully")
             
             # Get articulation controller
+            self._log_message("Getting articulation controller...")
             self._articulation_controller = self._franka.get_articulation_controller()
+            if not self._articulation_controller:
+                raise Exception("Failed to get articulation controller from Franka")
+            self._log_message("Articulation controller obtained successfully")
             
             self._log_message("Controllers initialized successfully")
             self._current_status = "Ready for execution"
@@ -120,7 +156,10 @@ class RoboCopilotChat:
             
         except Exception as e:
             self._log_message(f"Error setting up controllers: {str(e)}")
+            self._log_message(f"Error type: {type(e).__name__}")
             import traceback
+            error_details = traceback.format_exc()
+            self._log_message(f"Full error traceback: {error_details}")
             traceback.print_exc()
             return False
 
