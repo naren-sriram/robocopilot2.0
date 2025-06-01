@@ -38,12 +38,10 @@ icon = "data/icon.png"
 "omni.kit.uiapp" = {}
 "omni.isaac.core" = {}
 "omni.isaac.franka" = {}
-"omni.isaac.robot.manipulators" = {}
 "omni.isaac.examples" = {}
 "isaacsim.core.api" = {}
 "isaacsim.gui.components" = {}
 "isaacsim.examples.extension" = {}
-"isaac.robot.manipulators" = {}
 "isaacsim.storage.native" = {}
 "omni.usd" = {}
 "omni.timeline" = {}
@@ -56,6 +54,10 @@ name = "robocopilot_chat_python"
 [[python.requirements]]
 package = "groq"
 version = ">=0.24.0"
+
+# Force pip to install packages with --no-deps flag
+[python.pipargs]
+install = ["--no-deps", "--force-reinstall"]
 
 # Watch the .py files for hot reloading (only works for Python files), by default only .py files are watched
 [settings]
