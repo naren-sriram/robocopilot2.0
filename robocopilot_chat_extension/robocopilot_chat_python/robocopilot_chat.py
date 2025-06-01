@@ -128,15 +128,43 @@ class RoboCopilotChat:
             self._log_message(f"Cube names for controller: {cube_names}")
 
             # Check if gripper exists
-            if not hasattr(self._franka, 'gripper') or self._franka.gripper is None:
-                raise Exception("Franka gripper not found or not initialized")
-            self._log_message("Franka gripper validated")
-
+            self._log_message("Inspecting Franka robot attributes...")
+            self._log_message(f"Franka robot type: {type(self._franka)}")
+            
+            # Check for different possible gripper attribute names
+            gripper_attrs = [attr for attr in dir(self._franka) if any(keyword in attr.lower() for keyword in ['gripper', 'hand', 'end_effector'])]
+            self._log_message(f"Gripper/hand-related attributes: {gripper_attrs}")
+            
+            # Try to get gripper from the robot - check panda_hand first
+            gripper = None
+            if hasattr(self._franka, 'panda_hand') and self._franka.panda_hand is not None:
+                gripper = self._franka.panda_hand
+                self._log_message(f"Found 'panda_hand' attribute: {gripper}, type: {type(gripper)}")
+            elif hasattr(self._franka, 'gripper') and self._franka.gripper is not None:
+                gripper = self._franka.gripper
+                self._log_message(f"Found 'gripper' attribute: {gripper}, type: {type(gripper)}")
+            elif hasattr(self._franka, 'end_effector') and self._franka.end_effector is not None:
+                gripper = self._franka.end_effector
+                self._log_message(f"Found 'end_effector' attribute: {gripper}, type: {type(gripper)}")
+            else:
+                self._log_message("No gripper/panda_hand found - checking all hand-related attributes...")
+                for attr in gripper_attrs:
+                    attr_value = getattr(self._franka, attr, None)
+                    if attr_value is not None:
+                        self._log_message(f"Found {attr}: {attr_value}, type: {type(attr_value)}")
+                        gripper = attr_value
+                        break
+            
+            if not gripper:
+                raise Exception("Franka gripper/panda_hand not found or not initialized")
+            
+            self._log_message(f"Using gripper: {gripper}")
+            
             # Initialize the stacking controller
             self._log_message("Creating StackingController instance...")
             self._controller = StackingController(
                 name="stacking_controller",
-                gripper=self._franka.gripper,
+                gripper=gripper,
                 robot_articulation=self._franka,
                 picking_order_cube_names=cube_names,
                 robot_observation_name=self._franka.name,
