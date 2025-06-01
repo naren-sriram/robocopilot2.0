@@ -127,6 +127,29 @@ class RoboCopilotChat:
             cube_names = [f"cube_{i}" for i in range(len(self._cubes))]
             self._log_message(f"Cube names for controller: {cube_names}")
 
+            # Validate that cubes exist in the world scene
+            for cube_name in cube_names:
+                cube_obj = self._world.scene.get_object(cube_name)
+                if cube_obj:
+                    self._log_message(f"Validated cube in scene: {cube_name}")
+                else:
+                    self._log_message(f"Warning: cube {cube_name} not found in world scene")
+            
+            # Also check what objects are actually in the scene
+            scene_objects = self._world.scene.get_object_names()
+            self._log_message(f"All objects in scene: {scene_objects}")
+            
+            # Filter for cube objects in the scene
+            actual_cube_names = [name for name in scene_objects if 'cube' in name.lower()]
+            self._log_message(f"Actual cube names in scene: {actual_cube_names}")
+            
+            # Use the actual cube names if they're different
+            if actual_cube_names and len(actual_cube_names) >= 2:
+                cube_names = actual_cube_names[:2]  # Use first 2 cube names found
+                self._log_message(f"Using actual cube names: {cube_names}")
+            else:
+                self._log_message(f"Using generated cube names: {cube_names}")
+
             # Check if gripper exists
             self._log_message("Inspecting Franka robot attributes...")
             self._log_message(f"Franka robot type: {type(self._franka)}")
@@ -197,17 +220,47 @@ class RoboCopilotChat:
             return
 
         try:
+            # Get observations with error handling
             observations = self._world.get_observations()
+            if not observations:
+                self._log_message("Warning: No observations received from world")
+                return
+            
+            # Log observation keys for debugging
+            if hasattr(observations, 'keys'):
+                obs_keys = list(observations.keys())
+                self._log_message(f"Observation keys: {obs_keys}")
+            
+            # Get actions from controller with error handling
             actions = self._controller.forward(observations=observations)
+            if not actions:
+                self._log_message("Warning: No actions received from controller")
+                return
+            
+            # Apply actions
             self._articulation_controller.apply_action(actions)
 
+            # Check if task is done
             if self._controller.is_done():
                 self._world.pause()
                 self._log_message("Stacking task completed successfully")
                 self._current_status = "Task completed"
+                
         except Exception as e:
             self._log_message(f"Error in physics step: {str(e)}")
-            self._world.pause()
+            self._log_message(f"Error type: {type(e).__name__}")
+            
+            # Log more details about the error
+            import traceback
+            error_details = traceback.format_exc()
+            self._log_message(f"Full error traceback: {error_details}")
+            
+            # Pause simulation on error
+            if self._world:
+                self._world.pause()
+            
+            # Don't re-raise the exception to avoid stopping the simulation completely
+            # self._world.pause()
 
     async def _on_execute_task_async(self, prompt="Stack the cubes"):
         """Execute the stacking task asynchronously with prompt context"""
