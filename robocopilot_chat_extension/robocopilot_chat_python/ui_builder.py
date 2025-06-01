@@ -28,6 +28,8 @@ class UIBuilder:
         self.robocopilot_sample = None
         self.world = None
         self.wrapped_ui_elements = []  # For cleanup
+        self._post_load_in_progress = False  # Flag to prevent multiple post-load calls
+        self._scene_setup_successful = False  # Flag to track if scene setup was successful
 
     def on_menu_callback(self):
         """Called when the extension menu is opened"""
@@ -62,7 +64,7 @@ class UIBuilder:
         with ui.VStack(spacing=10):
             # Header
             ui.Label(
-                "🤖 RoboCopilot Chat Interface",
+                "RoboCopilot Chat Interface",
                 height=30,
                 style={"font_size": 18, "color": 0xFF00AAFF, "font_weight": "bold"}
             )
@@ -71,7 +73,7 @@ class UIBuilder:
 
             # Scene Control Section
             with ui.CollapsableFrame(
-                title="🎬 Scene Control",
+                title="Scene Control",
                 height=120,
                 collapsed=False,
             ):
@@ -87,7 +89,7 @@ class UIBuilder:
 
             # Task Control Section
             with ui.CollapsableFrame(
-                title="🎯 Task Control",
+                title="Task Control",
                 height=150,
                 collapsed=False,
             ):
@@ -153,7 +155,7 @@ class UIBuilder:
                 self.prompt_input.model.set_value("Stack the cubes on top of each other")
 
                 send_btn = ui.Button(
-                    "📤 Send",
+                    "Send",
                     width=80,
                     height=25,
                     clicked_fn=self._on_send_message,
@@ -196,7 +198,7 @@ class UIBuilder:
         if not self.chat_messages:
             with self.chat_display:
                 ui.Label(
-                    "👋 Welcome to RoboCopilot! Load a scene and enter commands to begin.",
+                    "Welcome to RoboCopilot! Load a scene and enter commands to begin.",
                     word_wrap=True,
                     style={"color": 0xFF888888, "font_size": 11}
                 )
@@ -211,11 +213,11 @@ class UIBuilder:
                     if sender == "User":
                         color = 0xFF00AAFF
                         bg_color = 0xFF2A2A2A
-                        icon = "👤"
+                        icon = "User"
                     else:
                         color = 0xFF00FF00
                         bg_color = 0xFF1A3A1A
-                        icon = "🤖"
+                        icon = "RoboCopilot"
 
                     with ui.VStack(spacing=2):
                         ui.Label(
@@ -242,13 +244,16 @@ class UIBuilder:
     def _setup_scene(self):
         """Setup scene callback for LoadButton - creates the scene and adds objects to World"""
         try:
+            # Reset scene setup flag
+            self._scene_setup_successful = False
+            
             # Create RoboCopilot sample
             if not self.robocopilot_sample:
                 self.robocopilot_sample = RoboCopilotChat()
-                self._add_chat_message("RoboCopilot", "🔄 Creating RoboCopilot sample...")
+                self._add_chat_message("RoboCopilot", "Creating RoboCopilot sample...")
             
             # Setup the scene (this will create stage and add objects)
-            self._add_chat_message("RoboCopilot", "🔄 Setting up scene...")
+            self._add_chat_message("RoboCopilot", "Setting up scene...")
             success = self.robocopilot_sample.setup_scene()
             
             if not success:
@@ -257,6 +262,9 @@ class UIBuilder:
             
             # Get the world instance (created by LoadButton)
             self.world = World.instance()
+            
+            # Mark scene setup as successful
+            self._scene_setup_successful = True
             
             # Update scene status immediately
             self.scene_status_label.text = "Scene setup completed"
@@ -267,6 +275,7 @@ class UIBuilder:
         except Exception as e:
             # Clear the sample if setup failed
             self.robocopilot_sample = None
+            self._scene_setup_successful = False
             self.scene_status_label.text = f"Scene setup failed: {str(e)}"
             self.scene_status_label.style = {"color": 0xFFFF0000, "font_size": 12}
             self._add_chat_message("RoboCopilot", f"Error setting up scene: {str(e)}")
@@ -279,13 +288,32 @@ class UIBuilder:
     def _setup_post_load(self):
         """Post-load callback for LoadButton - setup controllers after World is initialized"""
         try:
+            # Check if scene setup was successful first
+            if not self._scene_setup_successful:
+                self._add_chat_message("RoboCopilot", "Scene setup was not successful, skipping post-load...")
+                return
+                
+            # Check if post-load is already in progress
+            if self._post_load_in_progress:
+                self._add_chat_message("RoboCopilot", "Post-load already in progress, skipping...")
+                return
+                
+            # Double-check if robocopilot_sample exists
+            if not self.robocopilot_sample:
+                self._add_chat_message("RoboCopilot", "RoboCopilot sample not initialized, skipping post-load...")
+                return
+                
+            self._post_load_in_progress = True
+            self._add_chat_message("RoboCopilot", "Starting post-load setup...")
+            
             # Setup controllers asynchronously
             asyncio.ensure_future(self._setup_post_load_async())
             
         except Exception as e:
+            self._post_load_in_progress = False  # Reset flag on error
             self.scene_status_label.text = f"Error in post-load: {str(e)}"
             self.scene_status_label.style = {"color": 0xFFFF0000, "font_size": 12}
-            self._add_chat_message("RoboCopilot", f" Error in post-load: {str(e)}")
+            self._add_chat_message("RoboCopilot", f"Error in post-load: {str(e)}")
             print(f"Post-load error: {e}")
             import traceback
             traceback.print_exc()
@@ -293,9 +321,11 @@ class UIBuilder:
     async def _setup_post_load_async(self):
         """Async version of post-load setup"""
         try:
-            # Check if robocopilot_sample exists
+            # Double-check if robocopilot_sample exists
             if not self.robocopilot_sample:
                 raise Exception("RoboCopilot sample not initialized")
+            
+            self._add_chat_message("RoboCopilot", "Setting up controllers...")
             
             # Setup controllers
             success = await self.robocopilot_sample.setup_post_load()
@@ -327,6 +357,10 @@ class UIBuilder:
             print(f"Async post-load error: {e}")
             import traceback
             traceback.print_exc()
+        finally:
+            # Always reset the flag when done (success or failure)
+            self._post_load_in_progress = False
+            self._add_chat_message("RoboCopilot", "Post-load setup completed.")
 
     def _pre_reset(self):
         """Pre-reset callback for ResetButton"""
@@ -341,13 +375,17 @@ class UIBuilder:
         try:
             self.scene_status_label.text = "Scene reset"
             self.scene_status_label.style = {"color": 0xFFFFAA00, "font_size": 12}
-            self._add_chat_message("RoboCopilot", "🔄 Scene reset successfully.")
+            self._add_chat_message("RoboCopilot", "Scene reset successfully.")
         except Exception as e:
             self._add_chat_message("RoboCopilot", f"Error in post-reset: {str(e)}")
 
     def _on_clear_scene(self):
         """Clear the scene"""
         try:
+            # Reset flags
+            self._post_load_in_progress = False
+            self._scene_setup_successful = False
+            
             # Stop simulation if running
             if self.world and self.world.is_playing():
                 self.world.stop()
@@ -357,7 +395,7 @@ class UIBuilder:
             if self.robocopilot_sample:
                 self.robocopilot_sample.world_cleanup()
                 self.robocopilot_sample = None
-                self._add_chat_message("RoboCopilot", "🧹 Cleaning up RoboCopilot sample...")
+                self._add_chat_message("RoboCopilot", "Cleaning up RoboCopilot sample...")
 
             # Clear the world and stage
             if self.world:
@@ -368,7 +406,7 @@ class UIBuilder:
                 # Clear the world
                 self.world.clear()
                 self.world = None
-                self._add_chat_message("RoboCopilot", "🧹 Clearing world...")
+                self._add_chat_message("RoboCopilot", "Clearing world...")
 
             # Create a new empty stage to completely reset everything
             from isaacsim.core.utils.stage import create_new_stage
