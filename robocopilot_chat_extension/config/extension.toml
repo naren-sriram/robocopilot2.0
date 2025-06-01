@@ -64,3 +64,4 @@ install = ["--no-deps", "--force-reinstall", "--ignore-installed", "--no-cache-d
 # Watch the .py files for hot reloading (only works for Python files), by default only .py files are watched
 [settings]
 exts."omni.isaac.examples".auto_reload = true
+

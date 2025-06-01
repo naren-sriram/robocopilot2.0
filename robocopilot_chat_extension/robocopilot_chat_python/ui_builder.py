@@ -31,11 +31,38 @@ class UIBuilder:
         self._post_load_in_progress = False  # Flag to prevent multiple post-load calls
         self._scene_setup_successful = False  # Flag to track if scene setup was successful
         # Initialize Groq client
-        self.groq_client = groq.Groq(api_key="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")
+        self.groq_available = False
+        self.groq_client = None
+        self.groq_available, self.groq_client = self._setup_groq()
         self.system_prompt = """You are RoboCopilot, an AI assistant specialized in robotic manipulation tasks.
         You help users control and interact with a robotic arm in a simulated environment.
         Keep your responses clear, concise, and focused on the task at hand.
         If the user asks about executing a task, explain what the robot will do before suggesting they use the 'Execute Task' button."""
+
+    def _setup_groq(self):
+        """Setup groq client with runtime installation"""
+        try:
+            # Try to import first
+            import groq
+            self.groq_client = groq.Groq(api_key="your_api_key_here")
+            self.groq_available = True
+            print("Groq already available")
+        except ImportError:
+            try:
+                # Install at runtime using Isaac Sim's pip
+                import omni.kit.pipapi
+                omni.kit.pipapi.install("groq", version="0.24.0")
+                
+                # Now import after installation
+                import groq
+                self.groq_client = groq.Groq(api_key="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")
+                self.groq_available = True
+                print("Groq installed and configured successfully")
+            except Exception as e:
+                print(f"Failed to install/setup groq: {e}")
+                self.groq_available = False
+        
+        return self.groq_available, self.groq_client
 
     def on_menu_callback(self):
         """Called when the extension menu is opened"""
