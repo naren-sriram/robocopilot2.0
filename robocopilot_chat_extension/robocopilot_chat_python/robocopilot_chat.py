@@ -45,12 +45,11 @@ class RoboCopilotChat:
 
             # Add ground plane first for physics support
             self._log_message("Adding ground plane...")
-            ground_plane = FixedCuboid(
+            from isaacsim.core.api.objects.ground_plane import GroundPlane
+            ground_plane = GroundPlane(
                 prim_path="/World/GroundPlane",
                 name="ground_plane",
-                position=np.array([0.0, 0.0, -0.05]),
-                size=np.array([2.0, 2.0, 0.1]),
-                color=np.array([0.5, 0.5, 0.5])  # Gray
+                z_position=0, # Gray
             )
 
             # Load Franka robot
