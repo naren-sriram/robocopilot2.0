@@ -32,22 +32,22 @@ class RoboCopilotChat:
         """Setup the scene with Franka robot and cubes"""
         try:
             self._log_message("Starting scene setup...")
-            
+
             # Create new stage
             self._log_message("Creating new stage...")
             create_new_stage()
             self._add_light_to_stage()
-            
+
             # Load Franka robot
             self._log_message("Loading Franka robot...")
             robot_prim_path = "/franka"
             path_to_robot_usd = get_assets_root_path() + "/Isaac/Robots/Franka/franka.usd"
             add_reference_to_stage(path_to_robot_usd, robot_prim_path)
-            
+
             # Create Franka articulation
             self._log_message("Creating Franka articulation...")
             self._franka = SingleArticulation(robot_prim_path)
-            
+
             # Create cubes for stacking
             self._log_message("Creating cubes...")
             self._cubes = []
@@ -55,7 +55,7 @@ class RoboCopilotChat:
                 np.array([0.3, 0.3, 0.05]),  # Bottom cube
                 np.array([0.3, 0.1, 0.05]),  # Top cube (to be stacked)
             ]
-            
+
             for i, position in enumerate(cube_positions):
                 self._log_message(f"Creating cube {i}...")
                 # cubes should be of different colors - red and green
@@ -71,20 +71,20 @@ class RoboCopilotChat:
                     name=f"cube_{i}"
                 )
                 self._cubes.append(cube)
-            
+
             # Add objects to world (World will be created by LoadButton)
             self._log_message("Getting World instance...")
             self._world = World.instance()
-            
+
             self._log_message("Adding objects to World...")
             self._world.scene.add(self._franka)
             for i, cube in enumerate(self._cubes):
                 self._log_message(f"Adding cube {i} to World...")
                 self._world.scene.add(cube)
-            
+
             self._log_message("Scene setup completed with Franka robot and cubes")
             return True
-            
+
         except Exception as e:
             self._log_message(f"Error setting up scene: {str(e)}")
             import traceback
@@ -102,7 +102,7 @@ class RoboCopilotChat:
         """Setup controllers after scene is loaded"""
         try:
             self._log_message("Starting controller setup...")
-            
+
             # Import the stacking controller here to avoid dependency issues
             self._log_message("Importing StackingController...")
             try:
@@ -112,7 +112,7 @@ class RoboCopilotChat:
                 self._log_message(f"Failed to import StackingController: {str(e)}")
                 self._log_message("Make sure omni.isaac.examples extension is loaded")
                 raise
-            
+
             # Validate required objects
             if not self._franka:
                 raise Exception("Franka robot not initialized")
@@ -120,18 +120,18 @@ class RoboCopilotChat:
                 raise Exception("Cubes not created")
             if len(self._cubes) == 0:
                 raise Exception("No cubes found for stacking")
-                
+
             self._log_message(f"Found {len(self._cubes)} cubes for stacking")
-            
+
             # Get cube names for the controller
             cube_names = [f"cube_{i}" for i in range(len(self._cubes))]
             self._log_message(f"Cube names for controller: {cube_names}")
-            
+
             # Check if gripper exists
             if not hasattr(self._franka, 'gripper') or self._franka.gripper is None:
                 raise Exception("Franka gripper not found or not initialized")
             self._log_message("Franka gripper validated")
-            
+
             # Initialize the stacking controller
             self._log_message("Creating StackingController instance...")
             self._controller = StackingController(
@@ -142,18 +142,18 @@ class RoboCopilotChat:
                 robot_observation_name=self._franka.name,
             )
             self._log_message("StackingController created successfully")
-            
+
             # Get articulation controller
             self._log_message("Getting articulation controller...")
             self._articulation_controller = self._franka.get_articulation_controller()
             if not self._articulation_controller:
                 raise Exception("Failed to get articulation controller from Franka")
             self._log_message("Articulation controller obtained successfully")
-            
+
             self._log_message("Controllers initialized successfully")
             self._current_status = "Ready for execution"
             return True
-            
+
         except Exception as e:
             self._log_message(f"Error setting up controllers: {str(e)}")
             self._log_message(f"Error type: {type(e).__name__}")
@@ -167,7 +167,7 @@ class RoboCopilotChat:
         """Physics step callback for stacking execution"""
         if not self._controller or not self._articulation_controller:
             return
-            
+
         try:
             observations = self._world.get_observations()
             actions = self._controller.forward(observations=observations)
@@ -189,19 +189,19 @@ class RoboCopilotChat:
 
             if not self._world:
                 raise Exception("World not initialized")
-                
+
             if not self._controller:
                 raise Exception("Controller not initialized")
 
             # Reset controller
             self._controller.reset()
-            
+
             # Add physics callback
             self._world.add_physics_callback("sim_step", self._on_stacking_physics_step)
-            
+
             # Start simulation
             await self._world.play_async()
-            
+
         except Exception as e:
             self._log_message(f"Error executing task: {str(e)}")
             self._current_status = "Task failed"

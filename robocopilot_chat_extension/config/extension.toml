@@ -52,6 +52,11 @@ icon = "data/icon.png"
 [[python.module]]
 name = "robocopilot_chat_python"
 
+# Python package dependencies
+[[python.requirements]]
+package = "groq"
+version = ">=0.24.0"
+
 # Watch the .py files for hot reloading (only works for Python files), by default only .py files are watched
 [settings]
-exts."omni.isaac.examples".auto_reload = true 
+exts."omni.isaac.examples".auto_reload = true

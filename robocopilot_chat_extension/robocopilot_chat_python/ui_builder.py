@@ -6,7 +6,7 @@
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 #
-
+import groq
 import asyncio
 from datetime import datetime
 
@@ -30,6 +30,12 @@ class UIBuilder:
         self.wrapped_ui_elements = []  # For cleanup
         self._post_load_in_progress = False  # Flag to prevent multiple post-load calls
         self._scene_setup_successful = False  # Flag to track if scene setup was successful
+        # Initialize Groq client
+        self.groq_client = groq.Groq(api_key="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")
+        self.system_prompt = """You are RoboCopilot, an AI assistant specialized in robotic manipulation tasks.
+        You help users control and interact with a robotic arm in a simulated environment.
+        Keep your responses clear, concise, and focused on the task at hand.
+        If the user asks about executing a task, explain what the robot will do before suggesting they use the 'Execute Task' button."""
 
     def on_menu_callback(self):
         """Called when the extension menu is opened"""
@@ -53,7 +59,7 @@ class UIBuilder:
         for ui_elem in self.wrapped_ui_elements:
             if hasattr(ui_elem, 'cleanup'):
                 ui_elem.cleanup()
-        
+
         if self.robocopilot_sample:
             self.robocopilot_sample.world_cleanup()
         # self.robocopilot_sample = None
@@ -102,7 +108,7 @@ class UIBuilder:
 
             with ui.HStack(spacing=5):
                 self._load_btn = LoadButton(
-                    "Load Button", 
+                    "Load Button",
                     "Load Scene",
                     setup_scene_fn=self._setup_scene,
                     setup_post_load_fn=self._setup_post_load
@@ -112,7 +118,7 @@ class UIBuilder:
 
                 self._reset_btn = ResetButton(
                     "Reset Button",
-                    "Reset Scene", 
+                    "Reset Scene",
                     pre_reset_fn=self._pre_reset,
                     post_reset_fn=self._post_reset
                 )
@@ -246,32 +252,32 @@ class UIBuilder:
         try:
             # Reset scene setup flag
             self._scene_setup_successful = False
-            
+
             # Create RoboCopilot sample
             if not self.robocopilot_sample:
                 self.robocopilot_sample = RoboCopilotChat()
                 self._add_chat_message("RoboCopilot", "Creating RoboCopilot sample...")
-            
+
             # Setup the scene (this will create stage and add objects)
             self._add_chat_message("RoboCopilot", "Setting up scene...")
             success = self.robocopilot_sample.setup_scene()
-            
+
             if not success:
                 self.robocopilot_sample = None  # Clear failed sample
                 raise Exception("Failed to setup scene")
-            
+
             # Get the world instance (created by LoadButton)
             self.world = World.instance()
-            
+
             # Mark scene setup as successful
             self._scene_setup_successful = True
-            
+
             # Update scene status immediately
             self.scene_status_label.text = "Scene setup completed"
             self.scene_status_label.style = {"color": 0xFF00FF00, "font_size": 12}
-            
+
             self._add_chat_message("RoboCopilot", "Scene created successfully...")
-            
+
         except Exception as e:
             # Clear the sample if setup failed
             self.robocopilot_sample = None
@@ -292,23 +298,23 @@ class UIBuilder:
             if not self._scene_setup_successful:
                 self._add_chat_message("RoboCopilot", "Scene setup was not successful, skipping post-load...")
                 return
-                
+
             # Check if post-load is already in progress
             if self._post_load_in_progress:
                 self._add_chat_message("RoboCopilot", "Post-load already in progress, skipping...")
                 return
-                
+
             # Double-check if robocopilot_sample exists
             if not self.robocopilot_sample:
                 self._add_chat_message("RoboCopilot", "RoboCopilot sample not initialized, skipping post-load...")
                 return
-                
+
             self._post_load_in_progress = True
             self._add_chat_message("RoboCopilot", "Starting post-load setup...")
-            
+
             # Setup controllers asynchronously
             asyncio.ensure_future(self._setup_post_load_async())
-            
+
         except Exception as e:
             self._post_load_in_progress = False  # Reset flag on error
             self.scene_status_label.text = f"Error in post-load: {str(e)}"
@@ -324,33 +330,33 @@ class UIBuilder:
             # Double-check if robocopilot_sample exists
             if not self.robocopilot_sample:
                 raise Exception("RoboCopilot sample not initialized")
-            
+
             self._add_chat_message("RoboCopilot", "Setting up controllers...")
-            
+
             # Setup controllers
             success = await self.robocopilot_sample.setup_post_load()
-            
+
             if not success:
                 raise Exception("Failed to setup controllers")
-            
+
             # Update status
             self.scene_status_label.text = "Scene loaded successfully"
             self.scene_status_label.style = {"color": 0xFF00FF00, "font_size": 12}
-            
+
             # Enable buttons
             if hasattr(self, '_reset_btn'):
                 self._reset_btn.enabled = True
             if "Execute Task" in self.task_ui_elements:
                 self.task_ui_elements["Execute Task"].enabled = True
-            
+
             self._add_chat_message("RoboCopilot", "Scene loaded successfully! Ready to execute tasks.")
-            
+
         except Exception as e:
             # Clear sample on controller setup failure
             if self.robocopilot_sample:
                 self.robocopilot_sample.world_cleanup()
                 # self.robocopilot_sample = None
-                
+
             self.scene_status_label.text = f"Controller setup failed: {str(e)}"
             self.scene_status_label.style = {"color": 0xFFFF0000, "font_size": 12}
             self._add_chat_message("RoboCopilot", f"Error in controller setup: {str(e)}")
@@ -385,7 +391,7 @@ class UIBuilder:
             # Reset flags
             self._post_load_in_progress = False
             # self._scene_setup_successful = False
-            
+
             # Stop simulation if running
             if self.world and self.world.is_playing():
                 self.world.stop()
@@ -402,7 +408,7 @@ class UIBuilder:
                 # Remove physics callbacks
                 if self.world.physics_callback_exists("sim_step"):
                     self.world.remove_physics_callback("sim_step")
-                
+
                 # Clear the world
                 self.world.clear()
                 self.world = None
@@ -440,8 +446,44 @@ class UIBuilder:
         prompt = self.prompt_input.model.get_value_as_string().strip()
         if prompt:
             self._add_chat_message("User", prompt)
-            self._add_chat_message("RoboCopilot", f"Command received: '{prompt}'. Click 'Execute Task' to run.")
-            self.current_prompt = prompt
+            # Clear input field after sending
+            self.prompt_input.model.set_value("")
+            # Get AI response using Groq
+            asyncio.ensure_future(self._get_groq_response(prompt))
+
+    async def _get_groq_response(self, user_message):
+        """Get response from Groq API"""
+        try:
+            # Create chat completion
+            completion = self.groq_client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {"role": "system", "content": self.system_prompt},
+                    {"role": "user", "content": user_message}
+                ],
+                temperature=0.7,
+                max_tokens=500,
+                stream=True
+            )
+
+            # Initialize response accumulator
+            full_response = ""
+
+            # Stream the response
+            for chunk in completion:
+                if chunk.choices[0].delta.content is not None:
+                    content = chunk.choices[0].delta.content
+                    full_response += content
+                    # Update the chat display with the accumulated response
+                    self._add_chat_message("RoboCopilot", full_response)
+
+            # Store the prompt for task execution
+            self.current_prompt = user_message
+
+        except Exception as e:
+            error_message = f"Error getting AI response: {str(e)}"
+            self._add_chat_message("RoboCopilot", error_message)
+            print(error_message)
 
     def _on_execute_task(self):
         """Execute the stacking task"""
@@ -453,7 +495,7 @@ class UIBuilder:
         if not self.robocopilot_sample:
             self._add_chat_message("RoboCopilot", "Please load the scene first!")
             return
-            
+
         if not self.world:
             self._add_chat_message("RoboCopilot", "World not initialized. Please load the world first!")
             return
