@@ -14,6 +14,8 @@ from isaacsim.core.prims import SingleArticulation, XFormPrim
 from isaacsim.core.utils.stage import add_reference_to_stage, create_new_stage, get_current_stage
 from isaacsim.storage.native import get_assets_root_path
 from omni.isaac.franka.controllers import PickPlaceController
+from isaacsim.robot.manipulators.examples.franka import Franka
+
 
 from pxr import Sdf, UsdLux
 
@@ -52,15 +54,9 @@ class RoboCopilotChat:
                 z_position=0, # Gray
             )
 
-            # Load Franka robot
-            self._log_message("Loading Franka robot...")
-            robot_prim_path = "/franka"
-            path_to_robot_usd = get_assets_root_path() + "/Isaac/Robots/Franka/franka.usd"
-            add_reference_to_stage(path_to_robot_usd, robot_prim_path)
-
-            # Create Franka articulation
-            self._log_message("Creating Franka articulation...")
-            self._franka = SingleArticulation(robot_prim_path)
+            # Load Franka robot with gripper
+            self._log_message("Loading Franka robot with gripper...")
+            self._franka = Franka(prim_path="/World/Fancy_Franka", name="fancy_franka")
 
             # Create cubes for stacking - positioned higher to avoid falling through ground
             self._log_message("Creating cubes...")
