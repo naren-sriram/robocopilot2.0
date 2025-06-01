@@ -38,7 +38,8 @@ class UIBuilder:
         You help users control and interact with a robotic arm in a simulated environment.
         Keep your responses clear, concise, and focused on the task at hand.
         If the user asks about executing a task, explain what the robot will do before suggesting they use the 'Execute Task' button."""
-
+        self._execution_log = []
+        
     def _setup_groq(self):
         """Setup groq client with runtime installation"""
         # Get API key from environment variable
@@ -520,9 +521,18 @@ class UIBuilder:
             self._add_chat_message("RoboCopilot", error_message)
             print(error_message)
 
+    def _log_message(self, message):
+        """Add a message to the execution log"""
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        self._execution_log.append(f"[{timestamp}] {message}")
+        print(f"RoboCopilot: {message}")
+
     def _on_execute_task(self):
         """Execute the stacking task"""
-        prompt = self.prompt_input.model.get_value_as_string().strip()
+        # prompt = self.prompt_input.model.get_value_as_string().strip()
+        prompt = self.current_prompt.strip()  # Use the last user message as the prompt
+        self._log_message(f"Executing task with prompt: {prompt}, current_prompt: {self.current_prompt}")
         if not prompt:
             prompt = "Stack the cubes"
 

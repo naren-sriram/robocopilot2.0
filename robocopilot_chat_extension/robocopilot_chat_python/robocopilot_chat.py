@@ -79,7 +79,7 @@ class RoboCopilotChat:
                     color = np.array([0.0, 1.0, 0.0])  # Green
                 colors = ['red', 'green']
                 cube = DynamicCuboid(
-                    f"/World/cube_{i}",
+                    f"/World/cube_{colors[i]}",
                     position=position,
                     size=0.05,
                     color=color,
@@ -151,9 +151,9 @@ class RoboCopilotChat:
                 cube_names.append(cube.name)
                 self._log_message(f"Cube {i} ({cube.name}) at position: {cube_position}")
 
-            # Validate that cubes exist in the world scene
-            scene_objects = self._world.scene.get_object_names()
-            self._log_message(f"All objects in scene: {scene_objects}")
+            # # Validate that cubes exist in the world scene
+            # scene_objects = self._world.scene.get_object_names()
+            # self._log_message(f"All objects in scene: {scene_objects}")
             
             # Check if our cubes are properly registered
             for i, cube_name in enumerate(cube_names):
@@ -290,7 +290,8 @@ class RoboCopilotChat:
                 cube_position, cube_orientation = cube.get_world_pose()
                 cube_velocity = cube.get_linear_velocity()
                 
-                self._observations[f"cube_{i}"] = {
+                
+                self._observations[cube.name] = {
                     "position": cube_position,
                     "orientation": cube_orientation,
                     "linear_velocity": cube_velocity,
@@ -300,7 +301,7 @@ class RoboCopilotChat:
             self._log_message(f"Error updating observations: {str(e)}")
     
     # Simpler approach for your specific case
-    def extract_colors_simple(prompt):
+    def extract_colors_simple(self, prompt):
         words = prompt.lower().split()
         colors = ['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'black', 'white', 'gray', 'brown']
         
@@ -308,6 +309,7 @@ class RoboCopilotChat:
         
         pick_color = found_colors[0] if len(found_colors) > 0 else None
         place_color = found_colors[1] if len(found_colors) > 1 else None
+        self._log_message(f"Extracted pick color: {pick_color}, place color: {place_color} from prompt")
         
         return pick_color, place_color
 
@@ -333,11 +335,12 @@ class RoboCopilotChat:
                     if isinstance(value, dict):
                         self._log_message(f"  {key}: {list(value.keys())}")
                 self._obs_logged = True
+            self._log_message("Prompt received: " + self.prompt)
             # extract pick and place positions from prompt
             pick_color, place_color = self.extract_colors_simple(self.prompt)
 
             #place position should be 0.1m above the pick position
-            place_position = observations[f"cube_{pick_color}"]["position"] + np.array([0.0, 0.0, 0.1])
+            place_position = observations[f"cube_{place_color}"]["position"] + np.array([0.0, 0.0, 0.1])
 
             # Get actions from stacking controller
             actions = self._controller.forward(
