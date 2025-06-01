@@ -56,7 +56,7 @@ class UIBuilder:
         
         if self.robocopilot_sample:
             self.robocopilot_sample.world_cleanup()
-        self.robocopilot_sample = None
+        # self.robocopilot_sample = None
         self.world = None
 
     def build_ui(self):
@@ -349,7 +349,7 @@ class UIBuilder:
             # Clear sample on controller setup failure
             if self.robocopilot_sample:
                 self.robocopilot_sample.world_cleanup()
-                self.robocopilot_sample = None
+                # self.robocopilot_sample = None
                 
             self.scene_status_label.text = f"Controller setup failed: {str(e)}"
             self.scene_status_label.style = {"color": 0xFFFF0000, "font_size": 12}
@@ -384,7 +384,7 @@ class UIBuilder:
         try:
             # Reset flags
             self._post_load_in_progress = False
-            self._scene_setup_successful = False
+            # self._scene_setup_successful = False
             
             # Stop simulation if running
             if self.world and self.world.is_playing():
@@ -394,7 +394,7 @@ class UIBuilder:
             # Clean up RoboCopilot sample first
             if self.robocopilot_sample:
                 self.robocopilot_sample.world_cleanup()
-                self.robocopilot_sample = None
+                # self.robocopilot_sample = None
                 self._add_chat_message("RoboCopilot", "Cleaning up RoboCopilot sample...")
 
             # Clear the world and stage
