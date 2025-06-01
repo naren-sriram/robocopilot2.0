@@ -6,7 +6,6 @@
 # distribution of this software and related documentation without an express
 # license agreement from NVIDIA CORPORATION is strictly prohibited.
 #
-import groq
 import asyncio
 from datetime import datetime
 
@@ -44,7 +43,7 @@ class UIBuilder:
         try:
             # Try to import first
             import groq
-            self.groq_client = groq.Groq(api_key="your_api_key_here")
+            self.groq_client = groq.Groq(api_key="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")
             self.groq_available = True
             print("Groq already available")
         except ImportError:
