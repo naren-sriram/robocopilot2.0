@@ -17,7 +17,7 @@ from pxr import Sdf, UsdLux
 
 
 class RoboCopilotChat:
-    """RoboCopilot Chat implementation with custom scene building and stacking controller"""
+    """RoboCopilot Chat implementation with stacking controller and custom scene"""
 
     def __init__(self) -> None:
         self._controller = None
@@ -27,11 +27,12 @@ class RoboCopilotChat:
         self._franka = None
         self._cubes = []
         self._world = None
+        self._cube_positions = []  # Store actual cube positions
 
     def setup_scene(self):
         """Setup the scene with Franka robot and cubes"""
         try:
-            self._log_message("Starting scene setup...")
+            self._log_message("Starting custom scene setup...")
 
             # Create new stage
             self._log_message("Creating new stage...")
@@ -99,11 +100,11 @@ class RoboCopilotChat:
         XFormPrim(str(sphereLight.GetPath())).set_world_poses(np.array([[6.5, 0, 12]]))
 
     async def setup_post_load(self):
-        """Setup controllers after scene is loaded"""
+        """Setup stacking controller with custom cube coordinates"""
         try:
-            self._log_message("Starting controller setup...")
+            self._log_message("Starting stacking controller setup with custom coordinates...")
 
-            # Import the stacking controller here to avoid dependency issues
+            # Import the stacking controller
             self._log_message("Importing StackingController...")
             try:
                 from omni.isaac.franka.controllers.stacking_controller import StackingController
@@ -118,59 +119,49 @@ class RoboCopilotChat:
                 raise Exception("Franka robot not initialized")
             if not self._cubes:
                 raise Exception("Cubes not created")
-            if len(self._cubes) == 0:
-                raise Exception("No cubes found for stacking")
+            if len(self._cubes) < 2:
+                raise Exception("Need at least 2 cubes for stacking")
 
             self._log_message(f"Found {len(self._cubes)} cubes for stacking")
 
-            # Get cube names for the controller
-            cube_names = [f"cube_{i}" for i in range(len(self._cubes))]
-            self._log_message(f"Cube names for controller: {cube_names}")
+            # Get actual cube positions from the scene
+            self._cube_positions = []
+            cube_names = []
+            for i, cube in enumerate(self._cubes):
+                cube_position, cube_rotation = cube.get_world_pose()
+                self._cube_positions.append(cube_position)
+                cube_names.append(f"cube_{i}")
+                self._log_message(f"Cube {i} ({cube.name}) at position: {cube_position}")
 
             # Validate that cubes exist in the world scene
-            for cube_name in cube_names:
+            scene_objects = self._world.scene.get_object_names()
+            self._log_message(f"All objects in scene: {scene_objects}")
+            
+            # Check if our cubes are properly registered
+            for i, cube_name in enumerate(cube_names):
                 cube_obj = self._world.scene.get_object(cube_name)
                 if cube_obj:
                     self._log_message(f"Validated cube in scene: {cube_name}")
                 else:
                     self._log_message(f"Warning: cube {cube_name} not found in world scene")
-            
-            # Also check what objects are actually in the scene
-            scene_objects = self._world.scene.get_object_names()
-            self._log_message(f"All objects in scene: {scene_objects}")
-            
-            # Filter for cube objects in the scene
-            actual_cube_names = [name for name in scene_objects if 'cube' in name.lower()]
-            self._log_message(f"Actual cube names in scene: {actual_cube_names}")
-            
-            # Use the actual cube names if they're different
-            if actual_cube_names and len(actual_cube_names) >= 2:
-                cube_names = actual_cube_names[:2]  # Use first 2 cube names found
-                self._log_message(f"Using actual cube names: {cube_names}")
-            else:
-                self._log_message(f"Using generated cube names: {cube_names}")
 
-            # Check if gripper exists
-            self._log_message("Inspecting Franka robot attributes...")
-            self._log_message(f"Franka robot type: {type(self._franka)}")
-            
-            # Check for different possible gripper attribute names
-            gripper_attrs = [attr for attr in dir(self._franka) if any(keyword in attr.lower() for keyword in ['gripper', 'hand', 'end_effector'])]
-            self._log_message(f"Gripper/hand-related attributes: {gripper_attrs}")
-            
-            # Try to get gripper from the robot - check panda_hand first
+            # Find gripper
+            self._log_message("Finding Franka gripper...")
             gripper = None
-            if hasattr(self._franka, 'panda_hand') and self._franka.panda_hand is not None:
-                gripper = self._franka.panda_hand
-                self._log_message(f"Found 'panda_hand' attribute: {gripper}, type: {type(gripper)}")
-            elif hasattr(self._franka, 'gripper') and self._franka.gripper is not None:
+            if hasattr(self._franka, 'gripper') and self._franka.gripper is not None:
                 gripper = self._franka.gripper
-                self._log_message(f"Found 'gripper' attribute: {gripper}, type: {type(gripper)}")
+                self._log_message(f"Found gripper: {gripper}")
+            elif hasattr(self._franka, 'panda_hand') and self._franka.panda_hand is not None:
+                gripper = self._franka.panda_hand
+                self._log_message(f"Found panda_hand: {gripper}")
             elif hasattr(self._franka, 'end_effector') and self._franka.end_effector is not None:
                 gripper = self._franka.end_effector
-                self._log_message(f"Found 'end_effector' attribute: {gripper}, type: {type(gripper)}")
+                self._log_message(f"Found end_effector: {gripper}")
             else:
-                self._log_message("No gripper/panda_hand found - checking all hand-related attributes...")
+                # Check all attributes for gripper-like objects
+                gripper_attrs = [attr for attr in dir(self._franka) if any(keyword in attr.lower() for keyword in ['gripper', 'hand', 'end_effector'])]
+                self._log_message(f"Gripper/hand-related attributes: {gripper_attrs}")
+                
                 for attr in gripper_attrs:
                     attr_value = getattr(self._franka, attr, None)
                     if attr_value is not None:
@@ -179,12 +170,12 @@ class RoboCopilotChat:
                         break
             
             if not gripper:
-                raise Exception("Franka gripper/panda_hand not found or not initialized")
+                raise Exception("Franka gripper not found or not initialized")
             
             self._log_message(f"Using gripper: {gripper}")
             
-            # Initialize the stacking controller
-            self._log_message("Creating StackingController instance...")
+            # Initialize the stacking controller with cube coordinates
+            self._log_message("Creating StackingController with custom cube positions...")
             self._controller = StackingController(
                 name="stacking_controller",
                 gripper=gripper,
@@ -194,6 +185,31 @@ class RoboCopilotChat:
             )
             self._log_message("StackingController created successfully")
 
+            # IMPORTANT: Configure the controller with actual cube positions
+            self._log_message("Configuring controller with actual cube coordinates...")
+            
+            # Try to set cube positions if the controller supports it
+            if hasattr(self._controller, '_cube_positions'):
+                self._controller._cube_positions = self._cube_positions
+                self._log_message("Set _cube_positions on controller")
+            
+            if hasattr(self._controller, 'set_cube_positions'):
+                self._controller.set_cube_positions(self._cube_positions)
+                self._log_message("Called set_cube_positions on controller")
+            
+            # Set target stacking position (place cube_1 on cube_0)
+            if len(self._cube_positions) >= 2:
+                target_position = self._cube_positions[0].copy()  # Base cube position
+                target_position[2] += 0.1  # Stack on top
+                
+                if hasattr(self._controller, '_target_position'):
+                    self._controller._target_position = target_position
+                    self._log_message(f"Set target position: {target_position}")
+                
+                if hasattr(self._controller, 'set_target_position'):
+                    self._controller.set_target_position(target_position)
+                    self._log_message(f"Called set_target_position: {target_position}")
+
             # Get articulation controller
             self._log_message("Getting articulation controller...")
             self._articulation_controller = self._franka.get_articulation_controller()
@@ -201,12 +217,12 @@ class RoboCopilotChat:
                 raise Exception("Failed to get articulation controller from Franka")
             self._log_message("Articulation controller obtained successfully")
 
-            self._log_message("Controllers initialized successfully")
+            self._log_message("Stacking controller with custom coordinates initialized successfully")
             self._current_status = "Ready for execution"
             return True
 
         except Exception as e:
-            self._log_message(f"Error setting up controllers: {str(e)}")
+            self._log_message(f"Error setting up stacking controller: {str(e)}")
             self._log_message(f"Error type: {type(e).__name__}")
             import traceback
             error_details = traceback.format_exc()
@@ -215,39 +231,54 @@ class RoboCopilotChat:
             return False
 
     def _on_stacking_physics_step(self, step_size):
-        """Physics step callback for stacking execution"""
+        """Physics step callback for stacking execution with custom cube coordinates"""
         if not self._controller or not self._articulation_controller:
             return
 
         try:
-            # Get observations with error handling
+            # Get observations from world
             observations = self._world.get_observations()
             if not observations:
                 self._log_message("Warning: No observations received from world")
                 return
             
-            # Log observation keys for debugging
-            if hasattr(observations, 'keys'):
-                obs_keys = list(observations.keys())
-                self._log_message(f"Observation keys: {obs_keys}")
+            # Log observation keys for debugging (only first few times)
+            if not hasattr(self, '_obs_logged'):
+                if hasattr(observations, 'keys'):
+                    obs_keys = list(observations.keys())
+                    self._log_message(f"Available observation keys: {obs_keys}")
+                else:
+                    self._log_message(f"Observations type: {type(observations)}")
+                self._obs_logged = True
             
-            # Get actions from controller with error handling
+            # Update cube positions in observations if needed
+            # The stacking controller expects cube positions in observations
+            if hasattr(observations, 'update') and self._cube_positions:
+                # Add current cube positions to observations
+                for i, cube_pos in enumerate(self._cube_positions):
+                    # Update with current cube position from scene
+                    if i < len(self._cubes):
+                        current_pos, _ = self._cubes[i].get_world_pose()
+                        observations[f"cube_{i}_position"] = current_pos
+                        observations[f"cube_{i}_orientation"] = np.array([1.0, 0.0, 0.0, 0.0])
+            
+            # Get actions from stacking controller
             actions = self._controller.forward(observations=observations)
-            if not actions:
+            if actions is None:
                 self._log_message("Warning: No actions received from controller")
                 return
             
-            # Apply actions
+            # Apply actions to robot
             self._articulation_controller.apply_action(actions)
 
-            # Check if task is done
+            # Check if stacking task is done
             if self._controller.is_done():
                 self._world.pause()
-                self._log_message("Stacking task completed successfully")
+                self._log_message("Stacking task completed successfully!")
                 self._current_status = "Task completed"
                 
         except Exception as e:
-            self._log_message(f"Error in physics step: {str(e)}")
+            self._log_message(f"Error in stacking physics step: {str(e)}")
             self._log_message(f"Error type: {type(e).__name__}")
             
             # Log more details about the error
@@ -259,32 +290,32 @@ class RoboCopilotChat:
             if self._world:
                 self._world.pause()
             
-            # Don't re-raise the exception to avoid stopping the simulation completely
-            # self._world.pause()
+            self._current_status = "Task failed"
 
     async def _on_execute_task_async(self, prompt="Stack the cubes"):
-        """Execute the stacking task asynchronously with prompt context"""
+        """Execute the stacking task asynchronously with custom cube coordinates"""
         try:
-            self._log_message(f"Executing task: {prompt}")
+            self._log_message(f"Executing stacking task: {prompt}")
             self._current_status = "Executing task..."
 
             if not self._world:
                 raise Exception("World not initialized")
 
             if not self._controller:
-                raise Exception("Controller not initialized")
+                raise Exception("Stacking controller not initialized")
 
             # Reset controller
             self._controller.reset()
+            self._log_message("Controller reset completed")
 
-            # Add physics callback
+            # Add physics callback for stacking
             self._world.add_physics_callback("sim_step", self._on_stacking_physics_step)
 
             # Start simulation
             await self._world.play_async()
 
         except Exception as e:
-            self._log_message(f"Error executing task: {str(e)}")
+            self._log_message(f"Error executing stacking task: {str(e)}")
             self._current_status = "Task failed"
             raise
 
@@ -309,6 +340,7 @@ class RoboCopilotChat:
             self._articulation_controller = None
             self._franka = None
             self._cubes = []
+            self._cube_positions = []
             self._log_message("World cleanup completed")
             self._current_status = "Cleaned up"
         except Exception as e:
