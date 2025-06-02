@@ -39,7 +39,7 @@ class UIBuilder:
         Keep your responses clear, concise, and focused on the task at hand.
         If the user asks about executing a task, explain what the robot will do before suggesting they use the 'Execute Task' button."""
         self._execution_log = []
-        
+
     def _setup_groq(self):
         """Setup groq client with runtime installation"""
         # Get API key from environment variable
@@ -190,7 +190,7 @@ class UIBuilder:
                     height=25,
                     style={"background_color": 0xFF1E1E1E, "border_color": 0xFF00AAFF, "border_width": 1}
                 )
-                self.prompt_input.model.set_value("Stack the cubes on top of each other")
+                self.prompt_input.model.set_value("Place the green cube on top of the red cube")
 
                 send_btn = ui.Button(
                     "Send",

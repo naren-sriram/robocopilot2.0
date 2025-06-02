@@ -55,7 +55,8 @@ class RoboCopilotChat:
             self._log_message("Loading Franka robot with gripper...")
             franka_usd_path = get_assets_root_path() + "/Isaac/Robots/Franka/franka.usd"
             add_reference_to_stage(usd_path=franka_usd_path, prim_path="/World/Fancy_Franka")
-            self._franka = SingleArticulation(prim_path="/World/Fancy_Franka", name="fancy_franka")
+            from isaacsim.robot.manipulators.examples.franka import Franka
+            self._franka = Franka(prim_path="/World/Fancy_Franka", name="fancy_franka")
 
             # Create cubes for stacking - positioned higher to avoid falling through ground
             self._log_message("Creating cubes...")
@@ -335,12 +336,12 @@ class RoboCopilotChat:
             pick_color, place_color = self.extract_colors_simple(self.prompt)
 
             #place position should be 0.1m above the pick position
-            place_position = observations[f"cube_{place_color}"]["position"] + np.array([0.0, 0.0, 0.1])
+            # place_position = observations[f"cube_{place_color}"]["position"] + np.array([0.0, 0.0, 0.1])
 
             # Get actions from stacking controller
             actions = self._controller.forward(
                 picking_position=observations[f"cube_{pick_color}"]["position"],
-                placing_position=place_position,
+                placing_position= observations[f"cube_{place_color}"]["position"],
                 current_joint_positions=observations[self._franka.name]["joint_positions"],
             )
             if actions is None:
