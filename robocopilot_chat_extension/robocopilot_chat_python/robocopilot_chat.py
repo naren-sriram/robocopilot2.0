@@ -336,12 +336,12 @@ class RoboCopilotChat:
             pick_color, place_color = self.extract_colors_simple(self.prompt)
 
             #place position should be 0.1m above the pick position
-            # place_position = observations[f"cube_{place_color}"]["position"] + np.array([0.0, 0.0, 0.1])
+            place_position = observations[f"cube_{place_color}"]["position"] + np.array([0.0, 0.0, 0.02])
 
             # Get actions from stacking controller
             actions = self._controller.forward(
                 picking_position=observations[f"cube_{pick_color}"]["position"],
-                placing_position= observations[f"cube_{place_color}"]["position"],
+                placing_position= place_position,
                 current_joint_positions=observations[self._franka.name]["joint_positions"],
             )
             if actions is None:
