@@ -1,0 +1,55 @@
+[core]
+reloadable = true
+order = 0
+
+[package]
+# Semantic Versionning is used: https://semver.org/
+version = "1.0.0"
+
+# Lists people or organizations that are considered the "authors" of the package.
+authors = ["NVIDIA"]
+
+# The title and description fields are primarily for displaying extension info in UI
+title = "RoboCopilot Chat"
+description = "An AI-powered stacking interface with chat functionality for Isaac Sim manipulation tasks"
+
+# Path (relative to the root) or content of readme markdown file for UI.
+readme = "docs/README.md"
+
+# One of categories for UI.
+category = "Simulation"
+
+# Keywords for the extension
+keywords = ["manipulation", "franka", "stacking", "ai", "chat", "robotics"]
+
+# Location of change log file in target (final) folder of extension, relative to the root.
+# More info on writing changelog: https://keepachangelog.com/en/1.0.0/
+changelog = "docs/CHANGELOG.md"
+
+# Preview image and icon. Folder named "data" automatically goes in git lfs (see .gitattributes file).
+# Preview image is shown in "Overview" of Extensions window. Screenshot of an extension might be a good preview image.
+preview_image = "data/preview.png"
+
+# Icon is shown in Extensions window, it is recommended to be square, of size 256x256.
+icon = "data/icon.png"
+
+# Dependencies - Simplified dependencies matching example_scenario_extension
+[dependencies]
+"omni.kit.uiapp" = {}
+"omni.isaac.core" = {}
+"isaacsim.core.api" = {}
+"isaacsim.gui.components" = {}
+"isaacsim.examples.extension" = {}
+"isaacsim.storage.native" = {}
+"omni.usd" = {}
+"omni.timeline" = {}
+"omni.kit.pipapi" = {}
+
+# Main module of this extension (entrypoint)
+[[python.module]]
+name = "robocopilot_chat_python"
+
+# Watch the .py files for hot reloading (only works for Python files), by default only .py files are watched
+[settings]
+exts."omni.isaac.examples".auto_reload = true
+
