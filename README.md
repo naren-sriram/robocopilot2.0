@@ -10,9 +10,7 @@ The architecture diagram for this approach is shown below:
 ![image](https://github.com/user-attachments/assets/808d8ba5-23af-44b1-8593-52cf1ff5271b)
 
 
-![image (4)](https://github.com/user-attachments/assets/dfd80be3-2a93-45cb-914b-ace17febecd8)
-![image (5)](https://github.com/user-attachments/assets/d173da49-b6fa-4c39-93f0-6f67acfd2d37)
-
+TASK 1:
 
 
 
