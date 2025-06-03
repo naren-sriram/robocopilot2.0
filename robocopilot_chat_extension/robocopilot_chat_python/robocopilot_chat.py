@@ -187,12 +187,16 @@ class RoboCopilotChat:
                 raise Exception("Franka gripper not found or not initialized")
             
             self._log_message(f"Using gripper: {gripper}")
-            
+
+            # ''*** Set initial joint position of joint 7, 8 which are gripper ***'''
+            joint_position = self._franka.get_joint_positions()
+            joint_position[7:] = np.array([0.04, 0.04])
+            self._franka.set_joint_positions(joint_position)
             # Initialize the stacking controller with cube coordinates
             self._log_message("Creating PickPlaceController with custom cube positions...")
             self._controller = PickPlaceController(
                 name="pick_place_controller",
-                gripper=gripper,
+                gripper=self._franka.gripper,
                 robot_articulation=self._franka,
             )
             self._log_message("PickPlaceController created successfully")
