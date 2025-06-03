@@ -12,3 +12,13 @@ The architecture diagram for this approach is shown below:
 
 ![image (4)](https://github.com/user-attachments/assets/dfd80be3-2a93-45cb-914b-ace17febecd8)
 ![image (5)](https://github.com/user-attachments/assets/d173da49-b6fa-4c39-93f0-6f67acfd2d37)
+
+
+
+
+
+https://github.com/user-attachments/assets/b8465724-521a-42a0-84db-849c6bb84566
+
+
+
+
