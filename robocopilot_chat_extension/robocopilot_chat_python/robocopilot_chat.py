@@ -28,9 +28,10 @@ class RoboCopilotChat:
         self._franka = None
         self._cubes = []
         self._world = None
-        self._cube_positions = [] 
-        self._goal_position = [] 
+        self._cube_positions = []
+        self._goal_position = []
         self.prompt = ""
+        self.gripper_open_init = False
 
     def setup_scene(self):
         """Setup the scene with Franka robot and cubes"""
@@ -150,7 +151,7 @@ class RoboCopilotChat:
             # # Validate that cubes exist in the world scene
             # scene_objects = self._world.scene.get_object_names()
             # self._log_message(f"All objects in scene: {scene_objects}")
-            
+
             # Check if our cubes are properly registered
             for i, cube_name in enumerate(cube_names):
                 cube_obj = self._world.scene.get_object(cube_name)
@@ -175,23 +176,21 @@ class RoboCopilotChat:
                 # Check all attributes for gripper-like objects
                 gripper_attrs = [attr for attr in dir(self._franka) if any(keyword in attr.lower() for keyword in ['gripper', 'hand', 'end_effector'])]
                 self._log_message(f"Gripper/hand-related attributes: {gripper_attrs}")
-                
+
                 for attr in gripper_attrs:
                     attr_value = getattr(self._franka, attr, None)
                     if attr_value is not None:
                         self._log_message(f"Found {attr}: {attr_value}, type: {type(attr_value)}")
                         gripper = attr_value
                         break
-            
+
             if not gripper:
                 raise Exception("Franka gripper not found or not initialized")
-            
+
             self._log_message(f"Using gripper: {gripper}")
 
             # ''*** Set initial joint position of joint 7, 8 which are gripper ***'''
-            joint_position = self._franka.get_joint_positions()
-            joint_position[7:] = np.array([0.04, 0.04])
-            self._franka.set_joint_positions(joint_position)
+
             # Initialize the stacking controller with cube coordinates
             self._log_message("Creating PickPlaceController with custom cube positions...")
             self._controller = PickPlaceController(
@@ -203,25 +202,25 @@ class RoboCopilotChat:
 
             # IMPORTANT: Configure the controller with actual cube positions
             self._log_message("Configuring controller with actual cube coordinates...")
-            
+
             # Try to set cube positions if the controller supports it
             if hasattr(self._controller, '_cube_positions'):
                 self._controller._cube_positions = self._cube_positions
                 self._log_message("Set _cube_positions on controller")
-            
+
             if hasattr(self._controller, 'set_cube_positions'):
                 self._controller.set_cube_positions(self._cube_positions)
                 self._log_message("Called set_cube_positions on controller")
-            
+
             # Set target stacking position (place cube_1 on cube_0)
             if len(self._cube_positions) >= 2:
                 target_position = self._cube_positions[0].copy()  # Base cube position
                 target_position[2] += 0.1  # Stack on top
-                
+
                 if hasattr(self._controller, '_target_position'):
                     self._controller._target_position = target_position
                     self._log_message(f"Set target position: {target_position}")
-                
+
                 if hasattr(self._controller, 'set_target_position'):
                     self._controller.set_target_position(target_position)
                     self._log_message(f"Called set_target_position: {target_position}")
@@ -235,14 +234,14 @@ class RoboCopilotChat:
 
             # IMPORTANT: Setup observations for the World
             self._log_message("Setting up World observations...")
-            
+
             # Add robot observations
             self._world.add_physics_callback("observations", self._update_observations)
-            
+
             # Initialize observations dictionary
             self._observations = {}
             self._update_observations(0.0)  # Initial update
-            
+
             self._log_message("World observations configured")
 
             self._log_message("Stacking controller with custom coordinates initialized successfully")
@@ -263,18 +262,18 @@ class RoboCopilotChat:
         try:
             if not self._franka or not self._cubes:
                 return
-            
+
             # Get robot state
             joint_positions = self._franka.get_joint_positions()
             joint_velocities = self._franka.get_joint_velocities()
-            
+
             # Get end effector pose
             if hasattr(self._franka, 'end_effector'):
                 ee_position, ee_orientation = self._franka.end_effector.get_world_pose()
             else:
                 ee_position = np.array([0.0, 0.0, 0.0])
                 ee_orientation = np.array([1.0, 0.0, 0.0, 0.0])
-            
+
             # Update observations dictionary
             self._observations = {
                 self._franka.name: {
@@ -284,33 +283,33 @@ class RoboCopilotChat:
                     "end_effector_orientation": ee_orientation,
                 }
             }
-            
+
             # Add cube observations
             for i, cube in enumerate(self._cubes):
                 cube_position, cube_orientation = cube.get_world_pose()
                 cube_velocity = cube.get_linear_velocity()
-                
-                
+
+
                 self._observations[cube.name] = {
                     "position": cube_position,
                     "orientation": cube_orientation,
                     "linear_velocity": cube_velocity,
                 }
-            
+
         except Exception as e:
             self._log_message(f"Error updating observations: {str(e)}")
-    
+
     # Simpler approach for your specific case
     def extract_colors_simple(self, prompt):
         words = prompt.lower().split()
         colors = ['red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'black', 'white', 'gray', 'brown']
-        
+
         found_colors = [word for word in words if word in colors]
-        
+
         pick_color = found_colors[0] if len(found_colors) > 0 else None
         place_color = found_colors[1] if len(found_colors) > 1 else None
         self._log_message(f"Extracted pick color: {pick_color}, place color: {place_color} from prompt")
-        
+
         return pick_color, place_color
 
 
@@ -326,7 +325,7 @@ class RoboCopilotChat:
             if not observations:
                 self._log_message("Warning: No custom observations available")
                 return
-            
+
             # Log observation keys for debugging (only first few times)
             if not hasattr(self, '_obs_logged'):
                 obs_keys = list(observations.keys())
@@ -340,7 +339,15 @@ class RoboCopilotChat:
             pick_color, place_color = self.extract_colors_simple(self.prompt)
 
             #place position should be 0.1m above the pick position
-            place_position = observations[f"cube_{place_color}"]["position"] + np.array([0.0, 0.0, 0.02])
+            place_position = observations[f"cube_{place_color}"]["position"] + np.array([0.0, 0.0, 0.04])
+
+            if(self.gripper_open_init is False):
+                joint_position = self._franka.get_joint_positions()
+                print(f"Initial joint positions: {joint_position}")
+                joint_position[7:] = np.array([0.04, 0.04])
+                self._log_message(f"Setting initial joint positions: {joint_position}")
+                self._franka.set_joint_positions(joint_position)
+                self.gripper_open_init = True
 
             # Get actions from stacking controller
             actions = self._controller.forward(
@@ -351,7 +358,7 @@ class RoboCopilotChat:
             if actions is None:
                 self._log_message("Warning: No actions received from controller")
                 return
-            
+
             # Apply actions to robot
             self._articulation_controller.apply_action(actions)
 
@@ -360,20 +367,20 @@ class RoboCopilotChat:
                 self._world.pause()
                 self._log_message("Stacking task completed successfully!")
                 self._current_status = "Task completed"
-                
+
         except Exception as e:
             self._log_message(f"Error in stacking physics step: {str(e)}")
             self._log_message(f"Error type: {type(e).__name__}")
-            
+
             # Log more details about the error
             import traceback
             error_details = traceback.format_exc()
             self._log_message(f"Full error traceback: {error_details}")
-            
+
             # Pause simulation on error
             if self._world:
                 self._world.pause()
-            
+
             self._current_status = "Task failed"
 
     async def _on_execute_task_async(self, prompt="Stack the cubes"):
