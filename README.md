@@ -9,8 +9,9 @@ This is a simulation based digital twin robot-programmer and can be extended to 
 The architecture diagram for this approach is shown below:
 ![image](https://github.com/user-attachments/assets/808d8ba5-23af-44b1-8593-52cf1ff5271b)
 
+Extension pings Groq, receives reponse and uses the response to call relevant IsaacSim APIs
 
-TASK 1:
+TASK 1: 'Place Green cube on top of red cube'. 
 
 
 
@@ -19,11 +20,14 @@ https://github.com/user-attachments/assets/b8465724-521a-42a0-84db-849c6bb84566
 
 
 
-TASK 2:
+TASK 2: 'Place the red cube on top of the green object'. Extension generalizes for words such as objects because there is only one green object in the scene.
 
 
 
-https://github.com/user-attachments/assets/8a430608-d0cd-43a2-819f-0a6d252e3695
+https://github.com/user-attachments/assets/3b0b3b66-5ca1-4011-9b42-520241a2b64e
+
+
+
 
 
 
