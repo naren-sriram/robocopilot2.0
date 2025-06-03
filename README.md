@@ -11,12 +11,15 @@ The architecture diagram for this approach is shown below:
 
 Extension pings Groq, receives reponse and uses the response to call relevant IsaacSim APIs
 
-TASK 1: 'Place Green cube on top of red cube'. 
+TASK 1: 'Place the green cube on top of red cube'. 
 
 
 
 
-https://github.com/user-attachments/assets/b8465724-521a-42a0-84db-849c6bb84566
+
+https://github.com/user-attachments/assets/c409a116-5285-421c-90fd-5f5e68914d64
+
+
 
 
 
